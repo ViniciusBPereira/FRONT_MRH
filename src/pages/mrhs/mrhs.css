@@ -450,3 +450,16 @@
   font-size: 13px;
   font-weight: 500;
 }
+.btn-export-excel {
+  background: #1d6f42;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-export-excel:hover {
+  opacity: 0.9;
+}

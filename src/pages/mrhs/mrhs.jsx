@@ -1,11 +1,10 @@
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import { FaPlus, FaRegCommentDots } from "react-icons/fa";
 import "./mrhs.css";
 import { useSidebar } from "../../components/sidebarcontext";
 import { useNavigate } from "react-router-dom";
+import ExcelJS from "exceljs";
 
 const API_BASE = "https://api-info.xyz/api";
 
@@ -23,48 +22,6 @@ export default function MRHs() {
   const [comentarios, setComentarios] = useState([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [salvando, setSalvando] = useState(false);
-
-    /* ================= EXPORT EXCEL ================= */
-function exportarExcel() {
-  const dados = lista.map((r) => ({
-    Abertura: r.data_abertura,
-    Dias: r.dias_em_aberto ?? 0,
-    MRH: r.mrh,
-    Função: r.funcao,
-    Motivo: r.motivo_admissao,
-    Escala: r.escala,
-    Período: r.periodo,
-    Empresa: r.empresa,
-    Endereço: r.endereco,
-    CR: r.cr,
-    "Usuário Abertura": r.usuario_abertura,
-    Diretor: r.diretor,
-    "Gerente Regional": r.gerente_regional,
-    Gerente: r.gerente,
-    Supervisor: r.supervisor,
-    Responsável: r.responsavel,
-    Comentários: r.total_comentarios,
-    Candidatos: r.total_candidatos,
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(dados);
-  const workbook = XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, "MRHs Abertas");
-
-  const buffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array",
-  });
-
-  saveAs(
-    new Blob([buffer], {
-      type:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }),
-    "MRHs_Abertas.xlsx"
-  );
-}
 
   /* ================= COMPARAÇÃO ================= */
   function dadosMudaram(novos, antigos) {
@@ -85,6 +42,71 @@ function exportarExcel() {
     }
     return false;
   }
+/* ================= EXPORTAÇÃO EXCEL ================= */
+async function exportarExcel() {
+  if (!lista.length) return;
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("MRHs Abertas");
+
+  sheet.columns = [
+    { header: "Abertura", key: "data_abertura", width: 15 },
+    { header: "Dias em Aberto", key: "dias_em_aberto", width: 15 },
+    { header: "MRH", key: "mrh", width: 10 },
+    { header: "Função", key: "funcao", width: 25 },
+    { header: "Motivo", key: "motivo_admissao", width: 25 },
+    { header: "Escala", key: "escala", width: 15 },
+    { header: "Período", key: "periodo", width: 15 },
+    { header: "Empresa", key: "empresa", width: 30 },
+    { header: "Endereço", key: "endereco", width: 40 },
+    { header: "CR", key: "cr", width: 35 },
+    { header: "Usuário Abertura", key: "usuario_abertura", width: 25 },
+    { header: "Diretor", key: "diretor", width: 25 },
+    { header: "Gerente Regional", key: "gerente_regional", width: 25 },
+    { header: "Gerente", key: "gerente", width: 25 },
+    { header: "Supervisor", key: "supervisor", width: 25 },
+    { header: "Responsável", key: "responsavel", width: 25 },
+    { header: "Qtd. Comentários", key: "total_comentarios", width: 18 },
+    { header: "Qtd. Candidatos", key: "total_candidatos", width: 18 },
+  ];
+
+  lista.forEach((item) => {
+    sheet.addRow({
+      data_abertura: item.data_abertura,
+      dias_em_aberto: item.dias_em_aberto ?? 0,
+      mrh: item.mrh,
+      funcao: item.funcao,
+      motivo_admissao: item.motivo_admissao,
+      escala: item.escala,
+      periodo: item.periodo,
+      empresa: item.empresa,
+      endereco: item.endereco,
+      cr: item.cr,
+      usuario_abertura: item.usuario_abertura,
+      diretor: item.diretor,
+      gerente_regional: item.gerente_regional,
+      gerente: item.gerente,
+      supervisor: item.supervisor,
+      responsavel: item.responsavel,
+      total_comentarios: item.total_comentarios,
+      total_candidatos: item.total_candidatos,
+    });
+  });
+
+  sheet.getRow(1).font = { bold: true };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `mrhs_abertas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
   /* ================= FETCH MRHs ================= */
   const carregar = useCallback(async (silent = false) => {
@@ -306,11 +328,13 @@ function exportarExcel() {
         <div className="mrhs-header">
           <h2>Admissões Abertas</h2>
           <button
-    className="btn-export"
-    onClick={exportarExcel}
-  >
-    Exportar Excel
-  </button>
+  className="btn-export-excel"
+  onClick={exportarExcel}
+  title="Exportar para Excel"
+>
+  Exportar
+</button>
+
         </div>
 
         <div className="datagrid-wrapper">
