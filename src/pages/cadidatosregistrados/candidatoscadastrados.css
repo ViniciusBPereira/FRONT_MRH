@@ -1,0 +1,130 @@
+.candidatos-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #eef1f5;
+  padding: 14px 20px;
+  min-width: 0; /* ESSENCIAL para o ellipsis funcionar */
+}
+
+/* -----------------------------------
+   🔥 CABEÇALHO
+----------------------------------- */
+.candidatos-header {
+  margin-bottom: 14px;
+}
+
+.candidatos-header h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f1f1f;
+  margin: 0;
+}
+
+/* -----------------------------------
+   🔥 CONTAINER DA TABELA
+----------------------------------- */
+.datagrid-wrapper {
+  flex: 1;
+  display: flex;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #ffffff;
+  overflow: hidden;
+  min-width: 0 !important; /* SEM ISSO O GRID ESTOURA LARGURA */
+}
+
+/* -----------------------------------
+   🔥 ELLIPSIS GLOBAL
+----------------------------------- */
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -----------------------------------
+   🔥 TAGS DE STATUS E ANEXOS
+----------------------------------- */
+.tag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.tag.aprovado {
+  background: #d4f8d4;
+  color: #1b5e20;
+}
+
+.tag.pendente {
+  background: #f3f3f3;
+  color: #555;
+}
+
+/* -----------------------------------
+   🔥 BOTÃO DE EXCLUSÃO
+----------------------------------- */
+.btn-delete {
+  background: transparent;
+  border: none;
+  color: #b71c1c;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: 0.15s;
+}
+
+.btn-delete:hover {
+  background: #ffebee;
+  color: #d32f2f;
+  transform: scale(1.15);
+}
+
+/* -----------------------------------
+   🔥 DATAGRID FIX — evita overflow
+----------------------------------- */
+.MuiDataGrid-root {
+  min-width: 0 !important;
+}
+
+.MuiDataGrid-cell {
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+
+.MuiDataGrid-cellContent {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+
+.MuiDataGrid-main,
+.MuiDataGrid-virtualScroller,
+.MuiDataGrid-virtualScrollerRenderZone {
+  min-width: 0 !important;
+}
+
+/* Cabeçalho do DataGrid */
+.MuiDataGrid-columnHeaders {
+  background: #f7f7f7;
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.MuiDataGrid-columnHeaderTitle {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+/* Footer */
+.MuiDataGrid-footerContainer {
+  background: #f7f7f7;
+  border-top: 1px solid #d0d0d0;
+  height: 34px !important;
+}

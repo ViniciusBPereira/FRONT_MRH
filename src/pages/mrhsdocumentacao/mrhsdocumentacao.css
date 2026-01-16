@@ -1,0 +1,112 @@
+@import "../mrhs/mrhs.css";
+
+/* ===============================
+   AÇÕES DOCUMENTAÇÃO (GRID)
+   =============================== */
+
+.acoes-documentacao {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Botões de ação */
+.action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #1f3463;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  line-height: 1;
+  transition: 0.15s ease;
+}
+
+.action-btn:hover {
+  color: #000;
+  transform: scale(1.2);
+}
+/* =========================================================
+   🖤 FORÇAR TEXTO PRETO NO MODAL DE DOCUMENTAÇÃO
+   ========================================================= */
+
+/* Título do modal */
+.checklist-header h3 {
+  color: #000 !important;
+  background: none !important;
+  -webkit-text-fill-color: #000 !important;
+}
+
+/* Mensagens de alerta */
+.checklist-alert,
+.checklist-alert-error {
+  color: #000 !important;
+  background-color: #f1f5f9 !important; /* cinza claro */
+  border: 1px solid #cbd5e1;
+}
+
+/* Texto "Nenhum documento..." */
+.checklist-empty {
+  color: #000 !important;
+}
+
+/* Nome dos documentos */
+.checklist-name {
+  color: #000 !important;
+}
+
+/* Labels e textos gerais dentro do modal */
+.checklist-modal,
+.checklist-modal * {
+  color: inherit;
+}
+/* =========================================================
+   FORÇAR TEXTO PRETO — MODAL DE DOCUMENTOS (UPLOADS)
+   ========================================================= */
+
+/* Título do modal */
+.docs-title {
+  color: #000 !important;
+}
+
+/* Texto do nome do arquivo */
+.docs-name {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* Texto "Nenhum documento enviado." */
+.docs-empty {
+  color: #000 !important;
+}
+
+/* Texto "Enviando arquivo..." */
+.docs-uploading {
+  color: #000 !important;
+}
+
+/* Botão Anexar Documento */
+.docs-upload-btn {
+  color: #000 !important;
+}
+
+/* Botão Baixar */
+.docs-btn {
+  color: #000 !important;
+  background: #e5e7eb; /* cinza claro opcional */
+}
+
+.docs-btn:hover {
+  background: #d1d5db;
+}
+
+/* Garantia geral dentro do modal */
+.docs-modal-card,
+.docs-modal-card * {
+  color: #000 !important;
+}

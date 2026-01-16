@@ -1,0 +1,87 @@
+.login-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.left-bg {
+  width: 30%;
+  background-color: #0e1f33;
+  background-image: url("/src/assets/bg-pattern.png");
+  background-size: 300px;
+  background-repeat: repeat;
+  background-position: center;
+  height: 100%;
+}
+
+.login-box {
+  width: 70%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f7f7f7;
+}
+
+.login-card {
+  width: 420px;
+  background: #fff;
+  padding: 40px;
+  border-radius: 18px;
+  box-shadow: 0px 20px 40px rgba(0, 0, 0, 0.07);
+}
+
+.login-card h2 {
+  margin-top: -10px;
+  margin-bottom: 20px;
+  font-size: 32px;
+  font-weight: bold;
+  color: #000000;
+}
+
+label {
+  font-size: 14px;
+  margin-bottom: 4px;
+  display: block;
+  color: #000000;
+}
+
+input {
+  width: 92%;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  border: 1px solid #d4dce2;
+  background-color: #ffffff;
+  font-size: 15px;
+  color: #1f335a;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background: #1f335a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.erro {
+  color: red;
+  font-size: 12px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+.erro-geral {
+  color: red;
+  font-size: 14px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.input-erro {
+  border-color: red;
+}

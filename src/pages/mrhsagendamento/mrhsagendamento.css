@@ -1,0 +1,47 @@
+@import "../mrhs/mrhs.css";
+
+.inline-input {
+  width: 100%;
+  height: 24px;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.inline-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+/* ===== AÇÕES DA TABELA ===== */
+.table-actions {
+  position: absolute;
+  top: 40px; /* ajusta conforme header */
+  right: 45px;
+  z-index: 10;
+}
+
+/* ===== BOTÃO EXCEL ===== */
+.btn-export-excel {
+  background: #1d6f42; /* Excel green */
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  height: 26px;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.btn-export-excel:hover {
+  background: #155d35;
+}
+
+.btn-export-excel:active {
+  transform: translateY(1px);
+}

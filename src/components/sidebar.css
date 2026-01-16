@@ -1,0 +1,171 @@
+/* SIDEBAR CONTAINER */
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background: #0f1b2b url("../assets/bg-pattern.png");
+  background-size: 300px;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 20px;
+  color: #ffffff;
+  position: fixed;
+  left: 0;
+  top: 0;
+  box-shadow: 4px 0px 10px rgba(0, 0, 0, 0.3);
+  gap: 0px;
+
+  /* Transições suaves */
+  transition: width 0.32s cubic-bezier(0.25, 0.1, 0.25, 1),
+    padding 0.32s cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 40px;
+  z-index: 10;
+}
+
+/* MINIMIZED */
+.sidebar.minimized {
+  width: 55px;
+}
+
+/* BOTÃO DE MINIMIZAR */
+.toggle-btn {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s ease;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.08);
+}
+
+/* MENU CENTRAL */
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  flex-grow: 1;
+  justify-content: center;
+  padding-top: 0px !important;
+}
+
+/* ITEM MENU */
+/* Uso grid para manter o ícone sempre na mesma coluna, evitando "pulos" */
+.sidebar-item {
+  display: grid;
+  grid-template-columns: 28px 1fr; /* ícone | label */
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px 10px 20px;
+  width: 100%;
+  color: #d1d5db;
+  text-decoration: none;
+  border-radius: 12px;
+
+  /* Suavização completa */
+  transition: padding 0.32s ease-in-out, color 0.25s ease, transform 0.25s ease;
+
+  font-size: 0.95rem;
+}
+
+/* Ícone */
+.icon {
+  font-size: 20px;
+  /* garante que o ícone não mude de posição vertical */
+  justify-self: start; /* mantém à esquerda da célula do grid */
+  align-self: center;
+}
+
+/* LABEL — anima suavemente usando max-width */
+.label {
+  opacity: 1;
+  transform: translateX(0);
+  white-space: nowrap;
+
+  max-width: 200px; /* fundamental para animação suave */
+  overflow: hidden;
+
+  transition: opacity 0.32s ease, transform 0.32s ease, max-width 0.32s ease;
+}
+
+/* MINIMIZADO — some suavemente */
+.sidebar.minimized .label {
+  opacity: 0;
+  transform: translateX(-10px);
+  max-width: 0; /* anima de forma suave */
+  pointer-events: none;
+}
+
+/* MINIMIZADO — NÃO centralizar o ícone imediatamente
+   Mantemos o grid com a primeira coluna fixa (28px) para evitar "pulos".
+   Ajustamos apenas padding da linha (mais estreito), sem alterar a posição do ícone. */
+.sidebar.minimized .sidebar-item {
+  padding: 10px 8px;
+  /* NÃO colocamos justify-content:center aqui — assim o ícone não "vai pro centro" */
+  /* Caso queira centralizar os ícones só depois, recomendamos adicionar uma classe via JS após delay. */
+}
+
+/* Remover qualquer rule que force icon-wrapper a centralizar imediatamente */
+.sidebar.minimized .icon-wrapper {
+  /* deixamos sem margin:auto para evitar centralização imediata */
+  margin: 0;
+}
+
+/* HOVER */
+.sidebar-item:hover {
+  color: #ffffff;
+  transform: translateX(6px);
+}
+
+/* ATIVO */
+.sidebar-item.active {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* LOGOUT */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px 14px 20px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.35);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+
+  transition: padding 0.32s ease-in-out, background 0.25s ease,
+    transform 0.25s ease;
+
+  font-size: 0.95rem;
+  margin-top: auto;
+  margin-bottom: 50px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateX(6px);
+}
+
+/* LOGOUT MINIMIZADO */
+.sidebar.minimized .logout-btn {
+  padding: 14px;
+  justify-content: center;
+}
+
+.sidebar.minimized .logout-btn .label {
+  opacity: 0;
+  transform: translateX(-10px);
+  max-width: 0; /* anima */
+  overflow: hidden;
+}
