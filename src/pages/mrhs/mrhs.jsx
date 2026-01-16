@@ -25,58 +25,38 @@ export default function MRHs() {
   const [salvando, setSalvando] = useState(false);
 
     /* ================= EXPORT EXCEL ================= */
-async function exportarExcel() {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("MRHs Abertas");
+function exportarExcel() {
+  const dados = lista.map((r) => ({
+    Abertura: r.data_abertura,
+    Dias: r.dias_em_aberto ?? 0,
+    MRH: r.mrh,
+    Função: r.funcao,
+    Motivo: r.motivo_admissao,
+    Escala: r.escala,
+    Período: r.periodo,
+    Empresa: r.empresa,
+    Endereço: r.endereco,
+    CR: r.cr,
+    "Usuário Abertura": r.usuario_abertura,
+    Diretor: r.diretor,
+    "Gerente Regional": r.gerente_regional,
+    Gerente: r.gerente,
+    Supervisor: r.supervisor,
+    Responsável: r.responsavel,
+    Comentários: r.total_comentarios,
+    Candidatos: r.total_candidatos,
+  }));
 
-  worksheet.columns = [
-    { header: "Abertura", key: "data_abertura", width: 15 },
-    { header: "Dias", key: "dias_em_aberto", width: 10 },
-    { header: "MRH", key: "mrh", width: 10 },
-    { header: "Função", key: "funcao", width: 25 },
-    { header: "Motivo", key: "motivo_admissao", width: 20 },
-    { header: "Escala", key: "escala", width: 15 },
-    { header: "Período", key: "periodo", width: 15 },
-    { header: "Empresa", key: "empresa", width: 25 },
-    { header: "Endereço", key: "endereco", width: 35 },
-    { header: "CR", key: "cr", width: 20 },
-    { header: "Usuário Abertura", key: "usuario_abertura", width: 20 },
-    { header: "Diretor", key: "diretor", width: 20 },
-    { header: "Gerente Regional", key: "gerente_regional", width: 20 },
-    { header: "Gerente", key: "gerente", width: 20 },
-    { header: "Supervisor", key: "supervisor", width: 20 },
-    { header: "Responsável", key: "responsavel", width: 20 },
-    { header: "Comentários", key: "total_comentarios", width: 15 },
-    { header: "Candidatos", key: "total_candidatos", width: 15 },
-  ];
+  const worksheet = XLSX.utils.json_to_sheet(dados);
+  const workbook = XLSX.utils.book_new();
 
-  lista.forEach((r) => {
-    worksheet.addRow({
-      data_abertura: r.data_abertura,
-      dias_em_aberto: r.dias_em_aberto ?? 0,
-      mrh: r.mrh,
-      funcao: r.funcao,
-      motivo_admissao: r.motivo_admissao,
-      escala: r.escala,
-      periodo: r.periodo,
-      empresa: r.empresa,
-      endereco: r.endereco,
-      cr: r.cr,
-      usuario_abertura: r.usuario_abertura,
-      diretor: r.diretor,
-      gerente_regional: r.gerente_regional,
-      gerente: r.gerente,
-      supervisor: r.supervisor,
-      responsavel: r.responsavel,
-      total_comentarios: r.total_comentarios,
-      total_candidatos: r.total_candidatos,
-    });
+  XLSX.utils.book_append_sheet(workbook, worksheet, "MRHs Abertas");
+
+  const buffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
   });
 
-  // Estilo do header
-  worksheet.getRow(1).font = { bold: true };
-
-  const buffer = await workbook.xlsx.writeBuffer();
   saveAs(
     new Blob([buffer], {
       type:
@@ -85,7 +65,6 @@ async function exportarExcel() {
     "MRHs_Abertas.xlsx"
   );
 }
-
 
   /* ================= COMPARAÇÃO ================= */
   function dadosMudaram(novos, antigos) {
