@@ -247,14 +247,12 @@ export default function MRHs() {
         </div>
       ),
     },
-    { field: "mrh", headerName: "MRH", flex: 0.5 },
+    { field: "mrh", headerName: "MRH", flex: 1 },
     { field: "funcao", headerName: "Função", flex: 1 },
     {
       field: "salario",
       headerName: "Salário",
-      flex: 0.6,
-      align: "right",
-      headerAlign: "right",
+      flex: 0.1,
       renderCell: (p) =>
         p.value ? (
           <span className="salario-cell">
@@ -273,7 +271,7 @@ export default function MRHs() {
     { field: "periodo", headerName: "Período", flex: 0.6 },
     { field: "empresa", headerName: "Empresa", flex: 1.2 },
     { field: "endereco", headerName: "Endereço", flex: 1.4 },
-    { field: "cr", headerName: "CR", flex: 1.3 },
+    { field: "cr", headerName: "CR", flex: 1.0 },
     { field: "usuario_abertura", headerName: "Usuário Abertura", flex: 1 },
     { field: "diretor", headerName: "Diretor", flex: 1 },
     { field: "gerente_regional", headerName: "Ger. Regional", flex: 1 },
