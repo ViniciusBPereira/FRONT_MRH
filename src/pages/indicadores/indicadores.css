@@ -1,0 +1,62 @@
+/* =========================================================
+   📌 WRAPPER GERAL
+   ========================================================= */
+.inicio-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #eef1f5;
+  min-width: 0;
+}
+
+/* =========================================================
+   📌 CONTAINER PRINCIPAL
+   ========================================================= */
+.inicio-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 20px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* =========================================================
+   🔥 HEADER
+   ========================================================= */
+.inicio-header {
+  display: flex;
+  align-items: center;
+  margin: 12px 0 16px 0;
+}
+
+.inicio-header h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0;
+  padding-left: 4px;
+  letter-spacing: 0.5px;
+
+  background: linear-gradient(to right, #222, #000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* =========================================================
+   📊 CONTAINER DO POWER BI
+   ========================================================= */
+.bi-wrapper {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+/* IFRAME RESPONSIVO */
+.bi-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}

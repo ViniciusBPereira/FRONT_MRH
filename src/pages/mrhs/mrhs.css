@@ -1,0 +1,511 @@
+/* =========================================================
+   📌 WRAPPER GERAL DA TELA
+   - Responsável por ocupar toda a área disponível
+   - Evita overflow horizontal indesejado
+   ========================================================= */
+.mrhs-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100vh; /* ✅ ESSENCIAL */
+  background: #eef1f5;
+  min-width: 0;
+  overflow: hidden; /* ✅ BLOQUEIA SCROLL FANTASMA */
+}
+
+/* =========================================================
+   📌 CONTAINER PRINCIPAL
+   - Controla padding e empilhamento vertical
+   ========================================================= */
+.mrhs-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 20px;
+  overflow: hidden;
+
+  /* ESSENCIAL para grid responsivo */
+  min-width: 0;
+}
+
+/* =========================================================
+   🔥 CABEÇALHO / TÍTULO
+   ========================================================= */
+.mrhs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0 16px 0;
+}
+
+.mrhs-header h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0;
+  padding-left: 4px;
+  letter-spacing: 0.5px;
+
+  /* Gradiente discreto (branding elegante) */
+  background: linear-gradient(to right, #222, #000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* =========================================================
+   👤 TAG DO USUÁRIO LOGADO
+   ========================================================= */
+.header-user {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+
+  background: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 25px;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.user-email {
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  letter-spacing: 0.2px;
+}
+
+/* =========================================================
+   📊 CONTAINER DO DATAGRID
+   - Garante que o grid ocupe TODO o espaço disponível
+   ========================================================= */
+.datagrid-wrapper {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #ffffff;
+
+  /* ESSENCIAL: evita overflow lateral */
+  min-width: 0 !important;
+}
+
+/* =========================================================
+   ➕ BOTÃO DE AÇÃO (ÍCONE +)
+   ========================================================= */
+.action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  color: #666;
+  font-size: 12px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+
+  transition: 0.15s ease;
+}
+
+.action-btn:hover {
+  color: #000;
+  transform: scale(1.15);
+}
+
+/* =========================================================
+   📏 LINHAS DO DATAGRID
+   ========================================================= */
+.MuiDataGrid-row {
+  min-height: 28px !important;
+  max-height: 28px !important;
+}
+
+/* =========================================================
+   📄 CÉLULAS
+   - Ellipsis funcional
+   - Fonte compacta
+   ========================================================= */
+.MuiDataGrid-cell {
+  padding: 0 6px !important;
+  font-size: 11px !important;
+
+  border-right: 1px solid #e0e0e0 !important;
+
+  white-space: nowrap;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* ESSENCIAL: garante ellipsis em todos os browsers */
+.MuiDataGrid-cellContent {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* =========================================================
+   🔒 PREVENÇÃO DE EXPANSÃO INFINITA INTERNA
+   ========================================================= */
+.MuiDataGrid-main,
+.MuiDataGrid-virtualScroller,
+.MuiDataGrid-virtualScrollerRenderZone {
+  min-width: 0 !important;
+}
+
+/* =========================================================
+   🧱 CABEÇALHO DO GRID
+   ========================================================= */
+.MuiDataGrid-columnHeaders {
+  background: #f7f7f7;
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.MuiDataGrid-columnHeaderTitle {
+  width: 100%;
+  text-align: center !important;
+
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+}
+
+/* =========================================================
+   📎 FOOTER / PAGINAÇÃO
+   - Mantido em UMA LINHA
+   - Altura fixa
+   ========================================================= */
+.MuiDataGrid-footerContainer {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+
+  height: 32px !important;
+  background: #f7f7f7;
+  border-top: 1px solid #d0d0d0;
+}
+
+/* Remove contador de seleção (não utilizado) */
+.MuiDataGrid-footerContainer > div:first-child {
+  display: none !important;
+}
+
+/* =========================================================
+   📄 PAGINAÇÃO
+   ========================================================= */
+.MuiTablePagination-root {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.MuiTablePagination-actions {
+  display: flex !important;
+  gap: 0 !important;
+}
+
+.MuiTablePagination-actions .MuiIconButton-root {
+  margin: 0 !important;
+  padding: 4px !important;
+
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.MuiButtonBase-root:hover,
+.MuiButtonBase-root:focus,
+.MuiIconButton-root:hover,
+.MuiIconButton-root:focus {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Texto da paginação */
+.MuiTablePagination-displayedRows,
+.MuiTablePagination-selectLabel {
+  font-size: 11px !important;
+}
+
+/* =========================================================
+   🔽 SELECT DE PAGE SIZE
+   ========================================================= */
+.MuiSelect-select {
+  padding: 2px 6px !important;
+  padding-right: 20px !important;
+  font-size: 11px !important;
+}
+
+.MuiSelect-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* =========================================================
+   📂 MENU DO SELECT
+   ========================================================= */
+.MuiPaper-root.MuiMenu-paper {
+  padding: 2px 0 !important;
+  border-radius: 4px !important;
+}
+
+.MuiMenuItem-root {
+  min-height: 20px !important;
+  padding: 2px 6px !important;
+  font-size: 10px !important;
+}
+
+.MuiListItemText-root span {
+  font-size: 10px !important;
+}
+/* =========================================================
+   🏷️ BADGES DE CANDIDATOS / COMENTÁRIOS
+   ========================================================= */
+.badges-wrapper {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.badge {
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.badge-candidato {
+  background: #e5e7eb;
+  color: #111;
+}
+
+.badge-comentario {
+  background: #eef2ff;
+  color: #1e40af;
+}
+/* =========================================================
+   💬 AÇÕES E COMENTÁRIOS
+   ========================================================= */
+.acoes-wrapper {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.comment-btn {
+  color: #1e40af;
+}
+
+/* =========================================================
+   🏷️ BADGE DE COMENTÁRIOS
+   ========================================================= */
+.badge-comentario {
+  background: #eef2ff;
+  color: #1e40af;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   🪟 MODAL
+   ========================================================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  background: #fff;
+  width: 420px;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.modal textarea {
+  width: 100%;
+  min-height: 90px;
+  margin-top: 8px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+/* ================= CHAT MODAL ================= */
+.chat-modal {
+  width: 520px;
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Área das mensagens */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  margin: 10px 0;
+  background: #f1f5f9; /* cinza mais limpo */
+  border-radius: 6px;
+}
+
+/* Mensagem individual */
+.chat-message {
+  max-width: 85%;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #111827; /* texto mais legível */
+}
+
+/* Cabeçalho da mensagem */
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 4px;
+  color: #374151; /* cinza escuro elegante */
+}
+
+/* Texto */
+.chat-text {
+  white-space: pre-wrap;
+  color: #111827;
+}
+
+/* ================= MENSAGEM DO USUÁRIO ================= */
+.chat-message.usuario {
+  background: #e0ecff; /* azul mais suave */
+  border: 1px solid #c7dbff;
+  align-self: flex-end;
+}
+
+/* ================= MENSAGEM DO SISTEMA ================= */
+.chat-message.sistema {
+  background: #f3f4f6; /* cinza claro */
+  border: 1px solid #e5e7eb;
+  align-self: flex-start;
+}
+
+/* ================= INPUT ================= */
+.chat-input {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chat-input textarea {
+  flex: 1;
+  resize: none;
+  min-height: 60px;
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  color: #111827;
+}
+
+/* ================= BOTÃO ================= */
+.chat-input button {
+  width: 90px;
+  background: #1e3a8a; /* azul corporativo */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.chat-input button:hover {
+  background: #1d4ed8;
+}
+
+.chat-input button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+/* ================= TÍTULO DO MODAL ================= */
+.chat-modal h3 {
+  color: #000000; /* preto */
+  font-weight: 700;
+}
+/* ================= TEXTO SEM COMENTÁRIOS ================= */
+.chat-empty {
+  color: #000000; /* preto */
+  font-size: 13px;
+  font-weight: 500;
+}
+.btn-export-excel {
+  background: #1d6f42;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-export-excel:hover {
+  opacity: 0.9;
+}
+/* Header da tela */
+.mrhs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* Botão Exportar - compacto */
+.btn-export-excel {
+  background-color: #1f7a3f;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+  height: 28px;
+  min-width: auto;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+
+/* Hover */
+.btn-export-excel:hover {
+  background-color: #176332;
+}
+
+/* Click */
+.btn-export-excel:active {
+  transform: scale(0.96);
+}
+.salario-cell {
+  font-weight: 600;
+  color: #1e4620;
+  background-color: #e9f5ec;
+  padding: 4px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  min-width: 90px;
+  text-align: right;
+  font-size: 12px;
+}

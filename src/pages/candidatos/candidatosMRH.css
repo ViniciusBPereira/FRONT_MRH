@@ -1,0 +1,837 @@
+/* ==========================================
+   LAYOUT GERAL
+   ========================================== */
+.candidatos-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #eef1f5;
+  padding: 14px 20px;
+}
+
+/* CABEÇALHO */
+.candidatos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.candidatos-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrh-desc {
+  font-size: 12px;
+  color: #555;
+  margin-top: 4px;
+}
+
+/* BOTOES CABEÇALHO */
+.header-btns {
+  display: flex;
+  gap: 10px;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: 0.2s;
+}
+.btn:hover {
+  background: #f2f2f2;
+}
+.csv-btn {
+  background: #e3ffd9;
+  border-color: #b2ef9b;
+}
+.add-btn {
+  background: #d9e8ff;
+  border-color: #a8c7ff;
+}
+
+/* DATAGRID */
+.datagrid-wrapper {
+  flex: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #d0d0d0;
+}
+
+/* ==========================================
+   FIXES DATAGRID
+   ========================================== */
+.MuiDataGrid-cell {
+  overflow: visible !important;
+}
+.MuiDataGrid-cellContent {
+  overflow: visible !important;
+  pointer-events: auto !important;
+}
+.MuiDataGrid-row,
+.MuiDataGrid-virtualScrollerRenderZone {
+  overflow: visible !important;
+}
+
+/* BADGES */
+.status-tag {
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+}
+.status-ficha {
+  background: #d9e4ff;
+  color: #1a3a80;
+}
+.status-sem-ficha {
+  background: #ffe3e3;
+  color: #7a1a1a;
+}
+
+/* BOTAO FICHA / DOCUMENTOS */
+.btn-ficha {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.12s;
+}
+.btn-ficha:hover {
+  transform: scale(1.12);
+  color: #000;
+}
+
+/* ==========================================
+   MODAL OVERLAY BASE
+   ========================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* MODAL CARD BASE */
+.modal-card {
+  width: 520px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 26px 32px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.modal-header {
+  margin-bottom: 22px;
+}
+.modal-header h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1c1c1c;
+}
+
+/* FORM */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+.modal-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: 0.2s;
+}
+.modal-form input:focus {
+  border-color: #2c3e80;
+}
+
+/* ACTIONS */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.btn-cancel {
+  background: #e8e8e8;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-save {
+  background: #1f3463;
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-save:hover {
+  background: #16264a;
+}
+
+/* ==========================================
+   FICHA MODAL
+   ========================================== */
+.ficha-modal-card {
+  width: 750px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 28px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+/* FECHAR X */
+.ficha-close-absolute {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 6px;
+  transition: 0.2s ease;
+  z-index: 50;
+}
+.ficha-close-absolute:hover {
+  background: #eee;
+  color: #222;
+}
+
+/* HEADER */
+.ficha-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.ficha-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+}
+
+/* TABS */
+.ficha-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 10px 0;
+  flex-wrap: wrap;
+}
+.ficha-tab {
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: #eaeaea;
+  cursor: pointer;
+  font-weight: 600;
+  color: #111;
+  transition: 0.15s;
+}
+.ficha-tab:hover {
+  background: #dfdfdf;
+}
+.ficha-tab.active {
+  background: #1f3463;
+  color: white;
+}
+
+/* SECTIONS */
+.ficha-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.ficha-section label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+.ficha-section input,
+.ficha-section textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.ficha-section textarea {
+  resize: vertical;
+  background: #fff;
+  color: #000;
+}
+
+/* LISTAS */
+.card {
+  border: 1px solid #e6e6e6;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-bottom: 10px;
+}
+.btn-remove {
+  background: #ff6767;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-remove:hover {
+  background: #e65151;
+}
+
+/* SALVAR */
+.btn-save-ficha {
+  width: 100%;
+  background: #1f3463;
+  color: white;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  border: none;
+}
+.btn-save-ficha:hover {
+  background: #152447;
+}
+
+/* ==========================================
+   DOCUMENTOS MODAL
+   ========================================== */
+.docs-modal-card {
+  width: 620px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 26px;
+  background: #fff;
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.25);
+}
+
+.docs-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 6px;
+}
+.docs-close-btn:hover {
+  background: #eee;
+}
+
+.docs-title {
+  text-align: center;
+  margin-bottom: 14px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.docs-upload-btn {
+  display: inline-block;
+  padding: 10px 16px;
+  background: #1f3463;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+.docs-upload-btn:hover {
+  background: #152447;
+}
+
+.docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docs-empty {
+  color: #666;
+  font-style: italic;
+}
+
+.docs-item {
+  background: #f7f7f7;
+  padding: 12px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.docs-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.docs-btn {
+  padding: 6px 10px;
+  background: #d9e8ff;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #1f3463;
+  font-weight: 600;
+  text-decoration: none;
+}
+.docs-btn:hover {
+  background: #bfd4ff;
+}
+
+.docs-btn-remove {
+  padding: 6px 10px;
+  background: #ff6767;
+  border-radius: 5px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.docs-btn-remove:hover {
+  background: #e65151;
+}
+
+/* ==========================================
+   🔥 NOVO — MODAL GLOBAL DE VALIDAÇÕES
+   ========================================== */
+.val-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999 !important;
+  backdrop-filter: blur(2px);
+}
+
+.val-modal {
+  width: 380px;
+  background: #fff;
+  padding: 22px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.val-modal h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  text-align: center;
+  color: #000 !important;
+}
+
+.val-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.val-row span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000 !important;
+}
+
+.val-row select {
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+}
+
+.fechar-btn {
+  margin-top: 16px;
+  width: 100%;
+  background: #1f3463;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fechar-btn:hover {
+  background: #152447;
+}
+
+/* ==========================================
+   STATUS FINAL
+   ========================================== */
+.status-dropdown {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid #bebebe;
+  background: white;
+  cursor: pointer;
+  color: #222;
+}
+
+/* ==========================================
+   🔥 CAMPO VALIDAÇÕES — MINIMALISTA
+   ========================================== */
+.val-container {
+  position: relative;
+  width: 100%;
+  overflow: visible !important;
+}
+
+.val-toggle {
+  width: 100%;
+  padding: 4px 0;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #cfcfcf;
+  cursor: pointer;
+  font-size: 11px;
+  color: #666;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.val-toggle:hover {
+  background: #f7f7f7;
+  border-color: #bdbdbd;
+}
+
+.val-popup {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  width: 260px;
+  background: white;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  padding: 12px;
+  z-index: 999999 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.val-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.val-item span {
+  font-size: 12px;
+  color: #444;
+  font-weight: 600;
+}
+
+.val-item select {
+  padding: 3px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+}
+
+/* CORES DAS OPÇÕES */
+.val-item select option[value="pendente"] {
+  background: #fff6d1;
+  color: #7a6a00;
+}
+.val-item select option[value="aprovado"] {
+  background: #d7ffd9;
+  color: #1b5e20;
+}
+.val-item select option[value="rejeitado"] {
+  background: #ffd4d4;
+  color: #7a1a1a;
+}
+.val-item select option[value="não necessário"] {
+  background: #e7e7e7;
+  color: #444;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 880px) {
+  .ficha-modal-card,
+  .docs-modal-card {
+    width: 92%;
+    padding: 18px;
+  }
+}
+.finalizar-btn {
+  background: #53795f;
+  border-color: #14581f;
+}
+
+.finalizar-btn:hover {
+  background: #7a9683;
+}
+.btn-docs {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: #e8f0ff;
+  border: 1px solid #b8ccff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-docs:hover {
+  background: #d6e4ff;
+}
+
+/* ================= CHECKLIST DOCUMENTAÇÃO ================= */
+
+.checklist-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 100000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* MODAL */
+.checklist-modal {
+  width: 540px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px 24px 20px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.25);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* HEADER */
+.checklist-header {
+  position: relative;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid #e6e6e6;
+  text-align: center;
+}
+
+.checklist-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+}
+
+/* FECHAR (X SUPERIOR) */
+.checklist-close {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+}
+
+.checklist-close:hover {
+  background: #f0f0f0;
+  color: #000;
+}
+
+/* LISTA */
+.checklist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checklist-empty {
+  text-align: center;
+  font-style: italic;
+  color: #777;
+  padding: 12px 0;
+}
+
+/* ITEM */
+.checklist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: #f7f8fa;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  padding: 10px 14px;
+
+  font-size: 14px;
+  color: #222;
+  transition: 0.15s;
+}
+
+.checklist-item:hover {
+  background: #eef2ff;
+  border-color: #c6d2ff;
+}
+
+/* NOME */
+.checklist-item span {
+  font-weight: 500;
+}
+
+/* AÇÕES (CHECK + EXCLUIR) */
+.checklist-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* CHECKBOX */
+.checklist-actions input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* X DE EXCLUSÃO */
+.checklist-remove {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: #999;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+}
+
+.checklist-remove:hover {
+  color: #d10000;
+}
+
+/* FORM */
+.checklist-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  margin-top: 8px;
+  align-items: stretch;
+}
+
+.checklist-form input {
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #cfcfcf;
+  font-size: 13px;
+}
+
+.checklist-form input:focus {
+  outline: none;
+  border-color: #1f3463;
+}
+
+/* BOTÃO ADICIONAR (MESMA ALTURA DO INPUT) */
+.checklist-form button {
+  height: 42px;
+  padding: 0 22px;
+  border-radius: 8px;
+  border: none;
+  background: #1f3463;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.checklist-form button:hover {
+  background: #152447;
+}
+/* =========================================================
+   🖤 CORREÇÃO DEFINITIVA – INPUT DO MODAL CHECKLIST
+   ========================================================= */
+
+/* Campo de texto */
+.checklist-form input {
+  color: #000 !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #000 !important;
+  caret-color: #000;
+}
+
+/* Placeholder */
+.checklist-form input::placeholder {
+  color: #6b7280 !important; /* cinza legível */
+  opacity: 1;
+}
+
+/* Remove qualquer herança estranha */
+.checklist-form input:focus {
+  outline: none;
+}
