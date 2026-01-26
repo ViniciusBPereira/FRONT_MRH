@@ -333,7 +333,7 @@ export default function MRHs() {
     {
       field: "acao",
       headerName: "",
-      flex: 0.6,
+      flex: 0.9,
       sortable: false,
       renderCell: (params) => {
         const id = Number(params.row.mrh); // 🔧 AJUSTE
