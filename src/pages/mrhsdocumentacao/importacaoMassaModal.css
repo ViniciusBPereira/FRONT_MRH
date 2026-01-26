@@ -1,0 +1,101 @@
+.importacao-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.importacao-modal {
+  background: #fff;
+  width: 700px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.importacao-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.importacao-header h3 {
+  color: #000;
+  margin: 0;
+}
+
+.importacao-header button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.importacao-body {
+  padding: 16px;
+}
+
+.importacao-body table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.importacao-body th,
+.importacao-body td {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.importacao-body input {
+  width: 100%;
+  height: 30px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  color: #000;
+}
+
+.importacao-body .add {
+  margin-top: 12px;
+  background: none;
+  border: 1px dashed #1f3463;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #1f3463;
+}
+
+.importacao-body .remover {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #991b1b;
+}
+
+.importacao-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.importacao-footer button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.importacao-footer .confirmar {
+  background: #1f3463;
+  color: #fff;
+  border: none;
+}
+
+.erro {
+  margin-top: 10px;
+  color: #991b1b;
+}

@@ -27,27 +27,49 @@
   min-width: 0;
 }
 
-/* =========================================================
-   🔥 CABEÇALHO / TÍTULO
-   ========================================================= */
+/* ================= HEADER ================= */
 .mrhs-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin: 12px 0 16px 0;
+  color: #000000;
 }
 
-.mrhs-header h2 {
-  font-size: 26px;
-  font-weight: 700;
-  margin: 0;
-  padding-left: 4px;
-  letter-spacing: 0.5px;
+/* Área exclusiva do botão */
+.mrhs-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
 
-  /* Gradiente discreto (branding elegante) */
-  background: linear-gradient(to right, #222, #000);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Botão Exportar */
+.btn-export-excel {
+  background-color: #1f7a3f;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+  height: 28px;
+  width: auto;
+  min-width: unset;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+
+.btn-export-excel:hover {
+  background-color: #176332;
+}
+
+.btn-export-excel:active {
+  transform: scale(0.96);
 }
 
 /* =========================================================
@@ -451,41 +473,6 @@
   font-weight: 500;
 }
 
-/* Header da tela */
-.mrhs-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-/* Botão Exportar - compacto */
-.btn-export-excel {
-  background-color: #1f7a3f;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  line-height: 1;
-  height: 28px;
-  min-width: auto;
-  transition:
-    background-color 0.2s ease,
-    transform 0.1s ease;
-}
-
-/* Hover */
-.btn-export-excel:hover {
-  background-color: #176332;
-}
-
-/* Click */
-.btn-export-excel:active {
-  transform: scale(0.96);
-}
 .salario-cell {
   font-weight: 600;
   color: #1e4620;

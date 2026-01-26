@@ -5,8 +5,9 @@ import "./mrhs.css";
 import { useSidebar } from "../../components/sidebarcontext";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
+import { FaCheck } from "react-icons/fa";
 
-const API_BASE = "https://api-info.xyz/api";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function MRHs() {
   const minimized = useSidebar?.()?.minimized ?? false;
@@ -42,6 +43,33 @@ export default function MRHs() {
     }
     return false;
   }
+  /* ================= CONCLUIR PARTE DE SELECAO ================= */
+  async function concluirMRH(id) {
+    if (!window.confirm("Deseja mover esta MRH para Documentação?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API_BASE}/mrhsabertas/${id}/documentacao`, {
+        method: "PATCH",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          Accept: "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        const erro = await res.json();
+        throw new Error(erro.message || "Erro ao concluir MRH");
+      }
+
+      // Remove da lista local (sem reload)
+      setLista((prev) => prev.filter((item) => Number(item.mrh) !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   /* ================= EXPORTAÇÃO EXCEL ================= */
   async function exportarExcel() {
     if (!lista.length) return;
@@ -305,7 +333,7 @@ export default function MRHs() {
     {
       field: "acao",
       headerName: "",
-      flex: 0.4,
+      flex: 0.6,
       sortable: false,
       renderCell: (params) => {
         const id = Number(params.row.mrh); // 🔧 AJUSTE
@@ -335,6 +363,13 @@ export default function MRHs() {
             >
               <FaPlus size={11} />
             </button>
+            <button
+              className="action-btn check-btn"
+              title="Concluir (Enviar para Documentação)"
+              onClick={() => concluirMRH(id)}
+            >
+              <FaCheck size={12} />
+            </button>
           </div>
         );
       },
@@ -346,13 +381,16 @@ export default function MRHs() {
       <div className="mrhs-container">
         <div className="mrhs-header">
           <h2>Admissões Abertas</h2>
-          <button
-            className="btn-export-excel"
-            onClick={exportarExcel}
-            title="Exportar para Excel"
-          >
-            Exportar
-          </button>
+
+          <div className="mrhs-header-actions">
+            <button
+              className="btn-export-excel"
+              onClick={exportarExcel}
+              title="Exportar para Excel"
+            >
+              Exportar
+            </button>
+          </div>
         </div>
 
         <div className="datagrid-wrapper">

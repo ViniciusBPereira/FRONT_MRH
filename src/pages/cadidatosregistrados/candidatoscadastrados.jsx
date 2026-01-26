@@ -51,6 +51,26 @@ export default function CandidatosCadastrados() {
   }, [carregar]);
 
   // ------------------------------------------------------------
+  // ☑️ ATUALIZAR DESISTENTE
+  // ------------------------------------------------------------
+  async function atualizarDesistente(id, valor) {
+    try {
+      await api.patch(
+        `/candidatosregistrados/${id}/desistente`,
+        { desistente: valor },
+        { headers: authHeader() },
+      );
+
+      setLista((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, desistente: valor } : c)),
+      );
+    } catch (err) {
+      console.error("❌ Erro ao atualizar desistente:", err);
+      alert("Erro ao atualizar status de desistente.");
+    }
+  }
+
+  // ------------------------------------------------------------
   // 🗑️ EXCLUIR CANDIDATO
   // ------------------------------------------------------------
   async function excluir(id, nome) {
@@ -78,6 +98,13 @@ export default function CandidatosCadastrados() {
   // ------------------------------------------------------------
   const colunas = [
     { field: "id", headerName: "ID", width: 80 },
+
+    {
+      field: "mrh_id",
+      headerName: "MRH",
+      width: 90,
+      align: "center",
+    },
 
     {
       field: "nome",
@@ -112,6 +139,21 @@ export default function CandidatosCadastrados() {
         ) : (
           <span className="tag pendente">Não Selecionado</span>
         ),
+    },
+
+    {
+      field: "desistente",
+      headerName: "Desistente",
+      width: 110,
+      align: "center",
+      sortable: false,
+      renderCell: (p) => (
+        <input
+          type="checkbox"
+          checked={!!p.value}
+          onChange={(e) => atualizarDesistente(p.row.id, e.target.checked)}
+        />
+      ),
     },
 
     {
@@ -164,6 +206,9 @@ export default function CandidatosCadastrados() {
           headerHeight={36}
           pageSizeOptions={[30]}
           paginationModel={{ pageSize: 30, page: 0 }}
+          getRowClassName={(params) =>
+            params.row.desistente ? "row-desistente" : ""
+          }
           sx={{ height: "100% !important" }}
         />
       </div>
