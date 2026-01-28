@@ -31,7 +31,15 @@ export default function AppRoutes() {
       <Routes>
         {/* ================= LOGIN ================= */}
         <Route path="/" element={<Login />} />
-
+        {/* ================= RONDAS CORP ================= */}
+        <Route
+          path="/rondas"
+          element={
+            <Layout>
+              <RondasCorp />
+            </Layout>
+          }
+        />
         {/* ================= INDICADORES ================= */}
         <Route
           path="/indicadores"
@@ -106,18 +114,6 @@ export default function AppRoutes() {
 
         {/* ================= FALLBACK ================= */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
-        {/* ================= RONDAS CORP ================= */}
-        <Route
-          path="/rondas"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <RondasCorp />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
       </Routes>
     </BrowserRouter>
   );
