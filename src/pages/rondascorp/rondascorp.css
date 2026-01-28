@@ -23,7 +23,8 @@
   margin-right: -50vw;
 
   height: 100vh;
-  overflow: hidden;
+    overflow-y: auto;   /* 🔥 scroll vertical */
+  overflow-x: hidden; /* evita scroll horizontal */
 
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
 }
