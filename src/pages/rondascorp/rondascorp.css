@@ -1,0 +1,161 @@
+/* ===============================
+   REMOVE SIDEBAR SÓ NESSA PÁGINA
+================================ */
+.layout-sidebar {
+  display: none !important;
+}
+
+.layout-content {
+  margin-left: 0 !important;
+}
+
+/* =========================================================
+   📌 WRAPPER GERAL (IGUAL MRHS)
+========================================================= */
+.rondas-wrapper {
+  position: relative;
+
+  /* 👇 força ocupar a viewport inteira */
+  width: 101vw;
+  left: 49%;
+  right: 51%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+
+  height: 100vh;
+  overflow: hidden;
+
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+}
+
+/* =========================================================
+   📌 CONTAINER PRINCIPAL
+========================================================= */
+.rondas-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px;
+  min-width: 0;
+  overflow: hidden;
+  color: #eaeaea;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* ================= HEADER ================= */
+.rondas-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.rondas-header h1 {
+  font-size: 26px;
+  margin: 0;
+}
+
+.sync-status {
+  font-size: 13px;
+  color: #9ad1ff;
+}
+
+/* ================= ACTIONS ================= */
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+
+.actions button.primary {
+  background: #2196f3;
+}
+
+/* ================= TABLE CARD ================= */
+.table-card {
+  flex: 1; /* ✅ ocupa todo espaço disponível */
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  min-height: 0; /* ✅ CRÍTICO */
+}
+
+/* Scroll só da tabela */
+.table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ================= TABLE ================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #a5c9ff;
+  padding: 12px;
+}
+
+td {
+  padding: 12px;
+  font-size: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ================= PAGINATION ================= */
+.pagination {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.pagination button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ================= LOADING ================= */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-style: italic;
+}
+/* =====================================================
+   🔓 REMOVE LIMITAÇÃO DE LARGURA DO LAYOUT
+   (somente nesta página)
+===================================================== */
+
+/* Força o conteúdo ocupar a viewport inteira */
+.layout-content {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  padding: 0 !important;
+}

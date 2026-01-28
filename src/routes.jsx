@@ -8,6 +8,7 @@ import MRHsAgendamento from "./pages/mrhsagendamento/mrhsagendamento"; // ✅ NO
 import Indicadores from "./pages/indicadores/indicadores";
 import CandidatosMRH from "./pages/candidatos/candidatosMRH";
 import CandidatosCadastrados from "./pages/cadidatosregistrados/candidatoscadastrados";
+import RondasCorp from "./pages/rondascorp/rondascorp";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
@@ -105,6 +106,18 @@ export default function AppRoutes() {
 
         {/* ================= FALLBACK ================= */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
+        {/* ================= RONDAS CORP ================= */}
+        <Route
+          path="/rondas"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <RondasCorp />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
