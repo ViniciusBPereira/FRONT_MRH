@@ -74,7 +74,7 @@ export default function RondasCorp() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "rondas_hospital.csv";
+        a.download = "XRLssj_DLGA.csv";
         a.click();
         window.URL.revokeObjectURL(url);
       });
