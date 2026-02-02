@@ -15,9 +15,9 @@ import RondasCorpLogin from "./pages/rondascorpLogin/RondasCorpLogin";
 import Layout from "./components/layout";
 
 /* ===================== PROTEÇÕES ===================== */
-import ProtectedRondasRoute from "./routes/ProtectedRondasRoute";
+import ProtectedRondasRoute from "./protectedrondasroute";
 
-/* ===================== ROTA PROTEGIDA (APP PRINCIPAL) ===================== */
+/* ===================== PROTEÇÃO APP PRINCIPAL ===================== */
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
 
@@ -33,13 +33,11 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ================= LOGIN PRINCIPAL ================= */}
+        /* ================= LOGIN PRINCIPAL ================= */
         <Route path="/" element={<Login />} />
-
-        {/* ================= RONDAS CORP LOGIN ================= */}
+        /* ================= RONDAS CORP LOGIN ================= */
         <Route path="/rondas/login" element={<RondasCorpLogin />} />
-
-        {/* ================= RONDAS CORP (PROTEGIDO) ================= */}
+        /* ================= RONDAS CORP (PROTEGIDO) ================= */
         <Route
           path="/rondas"
           element={
@@ -50,8 +48,7 @@ export default function AppRoutes() {
             </ProtectedRondasRoute>
           }
         />
-
-        {/* ================= INDICADORES ================= */}
+        /* ================= INDICADORES ================= */
         <Route
           path="/indicadores"
           element={
@@ -62,8 +59,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= MRHs ================= */}
+        /* ================= MRHs ================= */
         <Route
           path="/mrhs"
           element={
@@ -74,7 +70,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/documentacao"
           element={
@@ -85,7 +80,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/agendamento"
           element={
@@ -96,7 +90,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/candidatos"
           element={
@@ -107,7 +100,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/mrhs/:mrhId/candidatos"
           element={
@@ -118,8 +110,11 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= FALLBACK ================= */}
+        /* ================= FALLBACK INTELIGENTE ================= */
+        <Route
+          path="/rondas/*"
+          element={<Navigate to="/rondas/login" replace />}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
