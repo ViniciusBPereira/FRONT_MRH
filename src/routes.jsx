@@ -4,16 +4,20 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/login/login";
 import Mrhs from "./pages/mrhs/mrhs";
 import MRHsDocumentacao from "./pages/mrhsdocumentacao/mrhsdocumentacao";
-import MRHsAgendamento from "./pages/mrhsagendamento/mrhsagendamento"; // ✅ NOVO
+import MRHsAgendamento from "./pages/mrhsagendamento/mrhsagendamento";
 import Indicadores from "./pages/indicadores/indicadores";
 import CandidatosMRH from "./pages/candidatos/candidatosMRH";
 import CandidatosCadastrados from "./pages/cadidatosregistrados/candidatoscadastrados";
 import RondasCorp from "./pages/rondascorp/rondascorp";
+import RondasCorpLogin from "./pages/rondascorpLogin/RondasCorpLogin";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
 
-/* ===================== ROTA PROTEGIDA ===================== */
+/* ===================== PROTEÇÕES ===================== */
+import ProtectedRondasRoute from "./protectedrondasroute";
+
+/* ===================== PROTEÇÃO APP PRINCIPAL ===================== */
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
 
@@ -29,18 +33,22 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ================= LOGIN ================= */}
+        /* ================= LOGIN PRINCIPAL ================= */
         <Route path="/" element={<Login />} />
-        {/* ================= RONDAS CORP ================= */}
+        /* ================= RONDAS CORP LOGIN ================= */
+        <Route path="/rondas/login" element={<RondasCorpLogin />} />
+        /* ================= RONDAS CORP (PROTEGIDO) ================= */
         <Route
           path="/rondas"
           element={
-            <Layout>
-              <RondasCorp />
-            </Layout>
+            <ProtectedRondasRoute>
+              <Layout>
+                <RondasCorp />
+              </Layout>
+            </ProtectedRondasRoute>
           }
         />
-        {/* ================= INDICADORES ================= */}
+        /* ================= INDICADORES ================= */
         <Route
           path="/indicadores"
           element={
@@ -51,8 +59,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= MRHs EM ABERTO ================= */}
+        /* ================= MRHs ================= */
         <Route
           path="/mrhs"
           element={
@@ -63,8 +70,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= DOCUMENTAÇÃO ================= */}
         <Route
           path="/documentacao"
           element={
@@ -75,8 +80,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= AGENDAMENTO ================= */}
         <Route
           path="/agendamento"
           element={
@@ -87,8 +90,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= BANCO DE CANDIDATOS ================= */}
         <Route
           path="/candidatos"
           element={
@@ -99,8 +100,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= CANDIDATOS DA MRH ================= */}
         <Route
           path="/mrhs/:mrhId/candidatos"
           element={
@@ -111,8 +110,11 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* ================= FALLBACK ================= */}
+        /* ================= FALLBACK INTELIGENTE ================= */
+        <Route
+          path="/rondas/*"
+          element={<Navigate to="/rondas/login" replace />}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

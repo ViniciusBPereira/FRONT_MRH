@@ -12,22 +12,30 @@ export const api = axios.create({
 /* ================= REQUEST INTERCEPTOR ================= */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    // 🔍 Detecta se é chamada da Rondas Corp
+    const isRondas = config.url?.startsWith("/rondas");
+
+    // 🔐 Seleciona o token correto
+    const token = isRondas
+      ? localStorage.getItem("rondasCorpToken")
+      : localStorage.getItem("token");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
 
     console.log(
       "➡️ API REQUEST:",
       config.method?.toUpperCase(),
       `${config.baseURL}${config.url}`,
-      token ? "🔐 com token" : "⚠️ sem token"
+      token ? "🔐 com token" : "⚠️ sem token",
     );
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 /* ================= RESPONSE INTERCEPTOR ================= */
@@ -42,12 +50,21 @@ api.interceptors.response.use(
         "❌ API ERROR:",
         error.response.status,
         `${error.response.config?.baseURL}${error.response.config?.url}`,
-        error.response.data
+        error.response.data,
       );
+
+      // 🚪 Se token da Rondas expirar, força logout apenas da Rondas
+      if (
+        error.response.status === 401 &&
+        error.response.config?.url?.startsWith("/rondas")
+      ) {
+        localStorage.removeItem("rondasCorpToken");
+        window.location.href = "/rondas/login";
+      }
     } else {
       console.error("🔥 API NETWORK ERROR:", error.message);
     }
 
     return Promise.reject(error);
-  }
+  },
 );

@@ -8,17 +8,29 @@ export default function RondasCorp() {
   const [rondas, setRondas] = useState([]);
   const [syncInfo, setSyncInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [offset, setOffset] = useState(0);
 
+  const [offset, setOffset] = useState(0);
   const limit = 20;
+
+  // 📅 filtros
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [roteiro, setRoteiro] = useState("");
+
   const refreshTimer = useRef(null);
 
   async function carregarDados(silent = false) {
     try {
       if (!silent) setLoading(true);
 
+      const params = { limit, offset };
+
+      if (dataInicio) params.dataInicio = dataInicio;
+      if (dataFim) params.dataFim = dataFim;
+      if (roteiro) params.roteiro = roteiro;
+
       const [rondasRes, syncRes] = await Promise.all([
-        api.get("/rondas", { params: { limit, offset } }),
+        api.get("/rondas", { params }),
         api.get("/rondas/ultima-sincronizacao"),
       ]);
 
@@ -31,23 +43,48 @@ export default function RondasCorp() {
     }
   }
 
-  function exportarCsv() {
-    api.get("/rondas/export/csv", { responseType: "blob" }).then((res) => {
-      const blob = new Blob([res.data], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "rondas_hospital.csv";
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+  /* ================= FILTROS ================= */
+
+  function aplicarFiltro() {
+    setOffset(0);
   }
+
+  function limparFiltro() {
+    setDataInicio("");
+    setDataFim("");
+    setRoteiro("");
+    setOffset(0);
+  }
+
+  function exportarCsv() {
+    const params = {};
+    if (dataInicio) params.dataInicio = dataInicio;
+    if (dataFim) params.dataFim = dataFim;
+    if (roteiro) params.roteiro = roteiro;
+
+    api
+      .get("/rondas/export/csv", {
+        params,
+        responseType: "blob",
+      })
+      .then((res) => {
+        const blob = new Blob([res.data], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "rondas_hospital.csv";
+        a.click();
+        window.URL.revokeObjectURL(url);
+      });
+  }
+
+  /* ================= EFEITOS ================= */
 
   useEffect(() => {
     carregarDados();
-  }, [offset]);
+  }, [offset, dataInicio, dataFim, roteiro]);
 
   useEffect(() => {
     refreshTimer.current = setInterval(
@@ -81,6 +118,48 @@ export default function RondasCorp() {
             </button>
           </div>
         </header>
+
+        {/* ================= FILTRO COMPACTO ================= */}
+        <section className="rondas-filter-card">
+          <div className="filter-fields">
+            <div className="filter-field">
+              <label>Início</label>
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-field">
+              <label>Fim</label>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-field filter-roteiro">
+              <label>Roteiro</label>
+              <input
+                type="text"
+                placeholder="Ex: Vigilante, Supervisor..."
+                value={roteiro}
+                onChange={(e) => setRoteiro(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="filter-actions">
+            <button className="btn-filter" onClick={aplicarFiltro}>
+              Filtrar
+            </button>
+            <button className="btn-clear" onClick={limparFiltro}>
+              Limpar
+            </button>
+          </div>
+        </section>
 
         {/* ================= TABELA ================= */}
         <section className="table-card">
