@@ -15,13 +15,14 @@
 .rondas-wrapper {
   position: relative;
 
-  width: 100vw; /* 🔥 remover 101vw */
-  left: 0; /* 🔥 remover hack */
-  margin-left: 0; /* 🔥 remover hack */
+  /* 👇 força ocupar a viewport inteira */
+  width: 101vw;
+  left: 49%;
+  right: 51%;
+  margin-left: -50vw;
+  margin-right: -50vw;
 
   height: 100vh;
-  overflow-y: auto; /* ✅ AQUI nasce a scrollbar */
-  overflow-x: hidden;
 
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
 }
@@ -34,8 +35,9 @@
   display: flex;
   flex-direction: column;
   padding: 16px 24px;
-  min-height: 100%; /* 🔥 importante */
-  overflow: visible; /* ✅ */
+  min-width: 0;
+  color: #eaeaea;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 /* ================= HEADER ================= */
