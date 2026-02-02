@@ -23,38 +23,43 @@ export default function RondasCorp() {
      🔄 CARREGAMENTO DE DADOS (CORRIGIDO)
   ===================================================== */
   async function carregarDados({ silent = false, resetOffset = false } = {}) {
-    try {
-      const finalOffset = resetOffset ? 0 : offset;
+  try {
+    const finalOffset = resetOffset ? 0 : offset;
 
-      // mantém estado sincronizado
-      if (resetOffset && offset !== 0) {
-        setOffset(0);
-      }
-
-      if (!silent) setLoading(true);
-
-      const params = {
-        limit,
-        offset: finalOffset,
-      };
-
-      if (dataInicio) params.dataInicio = dataInicio;
-      if (dataFim) params.dataFim = dataFim;
-      if (roteiro) params.roteiro = roteiro;
-
-      const [rondasRes, syncRes] = await Promise.all([
-        api.get("/rondas", { params }),
-        api.get("/rondas/ultima-sincronizacao"),
-      ]);
-
-      setRondas(rondasRes.data);
-      setSyncInfo(syncRes.data);
-    } catch (err) {
-      console.error("[RONDAS]", err);
-    } finally {
-      if (!silent) setLoading(false);
+    if (resetOffset && offset !== 0) {
+      setOffset(0);
     }
+
+    if (!silent) setLoading(true);
+
+    const params = {
+      limit,
+      offset: finalOffset,
+
+      // 🔥 CACHE BUSTER (RESOLVE O PROBLEMA)
+      _ts: Date.now(),
+    };
+
+    if (dataInicio) params.dataInicio = dataInicio;
+    if (dataFim) params.dataFim = dataFim;
+    if (roteiro) params.roteiro = roteiro;
+
+    const [rondasRes, syncRes] = await Promise.all([
+      api.get("/rondas", { params }),
+      api.get("/rondas/ultima-sincronizacao", {
+        params: { _ts: Date.now() },
+      }),
+    ]);
+
+    setRondas(rondasRes.data);
+    setSyncInfo(syncRes.data);
+  } catch (err) {
+    console.error("[RONDAS]", err);
+  } finally {
+    if (!silent) setLoading(false);
   }
+}
+
 
   /* =====================================================
      🎯 FILTROS
