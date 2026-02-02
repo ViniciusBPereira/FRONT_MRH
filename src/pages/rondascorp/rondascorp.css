@@ -37,7 +37,6 @@
   flex-direction: column;
   padding: 16px 24px;
   min-width: 0;
-  overflow: hidden;
   color: #eaeaea;
   font-family: "Inter", system-ui, sans-serif;
 }
