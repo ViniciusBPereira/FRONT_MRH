@@ -19,8 +19,16 @@ export default function RondasCorp() {
 
   const refreshTimer = useRef(null);
 
-  async function carregarDados(silent = false) {
+  /* =====================================================
+     🔄 CARREGAMENTO DE DADOS
+  ===================================================== */
+  async function carregarDados({ silent = false, resetOffset = false } = {}) {
     try {
+      if (resetOffset) {
+        setOffset(0);
+        return; // useEffect será disparado novamente
+      }
+
       if (!silent) setLoading(true);
 
       const params = { limit, offset };
@@ -43,8 +51,9 @@ export default function RondasCorp() {
     }
   }
 
-  /* ================= FILTROS ================= */
-
+  /* =====================================================
+     🎯 FILTROS
+  ===================================================== */
   function aplicarFiltro() {
     setOffset(0);
   }
@@ -56,6 +65,9 @@ export default function RondasCorp() {
     setOffset(0);
   }
 
+  /* =====================================================
+     📥 EXPORTAÇÃO CSV
+  ===================================================== */
   function exportarCsv() {
     const params = {};
     if (dataInicio) params.dataInicio = dataInicio;
@@ -80,20 +92,27 @@ export default function RondasCorp() {
       });
   }
 
-  /* ================= EFEITOS ================= */
+  /* =====================================================
+     ⚡ EFEITOS
+  ===================================================== */
 
+  // Sempre que offset ou filtros mudarem
   useEffect(() => {
     carregarDados();
   }, [offset, dataInicio, dataFim, roteiro]);
 
+  // Auto-refresh SEMPRE volta para os mais recentes
   useEffect(() => {
-    refreshTimer.current = setInterval(
-      () => carregarDados(true),
-      REFRESH_INTERVAL,
-    );
+    refreshTimer.current = setInterval(() => {
+      carregarDados({ silent: true, resetOffset: true });
+    }, REFRESH_INTERVAL);
+
     return () => clearInterval(refreshTimer.current);
   }, []);
 
+  /* =====================================================
+     🖥️ RENDER
+  ===================================================== */
   return (
     <div className="rondas-wrapper">
       <div className="rondas-container">
@@ -112,14 +131,16 @@ export default function RondasCorp() {
           </div>
 
           <div className="actions">
-            <button onClick={() => carregarDados()}>Atualizar</button>
+            <button onClick={() => carregarDados({ resetOffset: true })}>
+              Atualizar
+            </button>
             <button className="primary" onClick={exportarCsv}>
               Exportar CSV
             </button>
           </div>
         </header>
 
-        {/* ================= FILTRO COMPACTO ================= */}
+        {/* ================= FILTRO ================= */}
         <section className="rondas-filter-card">
           <div className="filter-fields">
             <div className="filter-field">
@@ -205,7 +226,9 @@ export default function RondasCorp() {
           >
             ◀ Anterior
           </button>
-          <button onClick={() => setOffset(offset + limit)}>Próxima ▶</button>
+          <button onClick={() => setOffset(offset + limit)}>
+            Próxima ▶
+          </button>
         </footer>
       </div>
     </div>
