@@ -4,14 +4,12 @@ import { api } from "../../services/api";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
 const TIMEZONE_BR = "America/Sao_Paulo";
+const LIMIT_MAX = 5000; // 🔥 traz tudo
 
 export default function RondasCorp() {
   const [rondas, setRondas] = useState([]);
   const [syncInfo, setSyncInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [offset, setOffset] = useState(0);
-  const limit = 20;
 
   // filtros
   const [dataInicio, setDataInicio] = useState("");
@@ -20,16 +18,13 @@ export default function RondasCorp() {
 
   const refreshTimer = useRef(null);
 
-  /* =====================================================
-     🔄 CARREGAMENTO DE DADOS (CORRETO)
-  ===================================================== */
-  async function carregarDados({ silent = false, forceOffset = null } = {}) {
+  async function carregarDados(silent = false) {
     try {
       if (!silent) setLoading(true);
 
       const params = {
-        limit,
-        offset: forceOffset !== null ? forceOffset : offset,
+        limit: LIMIT_MAX, // 🔥 sem paginação
+        offset: 0,
       };
 
       if (dataInicio) params.dataInicio = dataInicio;
@@ -50,25 +45,17 @@ export default function RondasCorp() {
     }
   }
 
-  /* =====================================================
-     🎯 FILTROS
-  ===================================================== */
   function aplicarFiltro() {
-    setOffset(0);
-    carregarDados({ forceOffset: 0 });
+    carregarDados();
   }
 
   function limparFiltro() {
     setDataInicio("");
     setDataFim("");
     setRoteiro("");
-    setOffset(0);
-    carregarDados({ forceOffset: 0 });
+    carregarDados();
   }
 
-  /* =====================================================
-     📥 EXPORTAÇÃO CSV
-  ===================================================== */
   function exportarCsv() {
     const params = {};
     if (dataInicio) params.dataInicio = dataInicio;
@@ -93,34 +80,21 @@ export default function RondasCorp() {
       });
   }
 
-  /* =====================================================
-     ⚡ EFEITOS
-  ===================================================== */
-
-  // Paginação
   useEffect(() => {
     carregarDados();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset]);
+  }, []);
 
-  // Auto-refresh (sempre volta para os mais recentes)
   useEffect(() => {
     refreshTimer.current = setInterval(() => {
-      setOffset(0);
-      carregarDados({ silent: true, forceOffset: 0 });
+      carregarDados(true);
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(refreshTimer.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* =====================================================
-     🖥️ RENDER
-  ===================================================== */
   return (
     <div className="rondas-wrapper">
       <div className="rondas-container">
-        {/* HEADER */}
         <header className="rondas-header">
           <div>
             <h1>Rondas – Hospital</h1>
@@ -137,56 +111,13 @@ export default function RondasCorp() {
           </div>
 
           <div className="actions">
-            <button onClick={() => aplicarFiltro()}>Atualizar</button>
+            <button onClick={aplicarFiltro}>Atualizar</button>
             <button className="primary" onClick={exportarCsv}>
               Exportar CSV
             </button>
           </div>
         </header>
 
-        {/* FILTROS */}
-        <section className="rondas-filter-card">
-          <div className="filter-fields">
-            <div className="filter-field">
-              <label>Início</label>
-              <input
-                type="date"
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-              />
-            </div>
-
-            <div className="filter-field">
-              <label>Fim</label>
-              <input
-                type="date"
-                value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-              />
-            </div>
-
-            <div className="filter-field filter-roteiro">
-              <label>Roteiro</label>
-              <input
-                type="text"
-                placeholder="Ex: Vigilante, Supervisor..."
-                value={roteiro}
-                onChange={(e) => setRoteiro(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="filter-actions">
-            <button className="btn-filter" onClick={aplicarFiltro}>
-              Filtrar
-            </button>
-            <button className="btn-clear" onClick={limparFiltro}>
-              Limpar
-            </button>
-          </div>
-        </section>
-
-        {/* TABELA */}
         <section className="table-card">
           <div className="table-wrapper">
             {loading ? (
@@ -210,11 +141,9 @@ export default function RondasCorp() {
                       <td>{r.nome_cliente}</td>
                       <td>{r.nome_guarda}</td>
                       <td>
-                        {r.hora_chegada
-                          ? new Date(r.hora_chegada).toLocaleString("pt-BR", {
-                              timeZone: TIMEZONE_BR,
-                            })
-                          : "-"}
+                        {new Date(r.hora_chegada).toLocaleString("pt-BR", {
+                          timeZone: TIMEZONE_BR,
+                        })}
                       </td>
                     </tr>
                   ))}
@@ -223,19 +152,6 @@ export default function RondasCorp() {
             )}
           </div>
         </section>
-
-        {/* PAGINAÇÃO */}
-        <footer className="pagination">
-          <button
-            disabled={offset === 0}
-            onClick={() => setOffset(offset - limit)}
-          >
-            ◀ Anterior
-          </button>
-          <button onClick={() => setOffset(offset + limit)}>
-            Próxima ▶
-          </button>
-        </footer>
       </div>
     </div>
   );
