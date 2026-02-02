@@ -9,7 +9,7 @@ import Indicadores from "./pages/indicadores/indicadores";
 import CandidatosMRH from "./pages/candidatos/candidatosMRH";
 import CandidatosCadastrados from "./pages/cadidatosregistrados/candidatoscadastrados";
 import RondasCorp from "./pages/rondascorp/rondascorp";
-import RondasCorpLogin from "./pages/rondascorpLogin/RondasCorpLogin";
+import RondasCorpLogin from "./pages/rondascorpLogin/rondascorplogin";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
