@@ -140,11 +140,7 @@ export default function RondasCorp() {
                       <td>{r.nome_roteiro}</td>
                       <td>{r.nome_cliente}</td>
                       <td>{r.nome_guarda}</td>
-                      <td>
-                        {new Date(r.hora_chegada).toLocaleString("pt-BR", {
-                          timeZone: TIMEZONE_BR,
-                        })}
-                      </td>
+                     <td>{r.hora_chegada}</td>
                     </tr>
                   ))}
                 </tbody>
