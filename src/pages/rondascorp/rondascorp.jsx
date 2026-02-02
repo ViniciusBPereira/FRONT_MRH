@@ -3,6 +3,7 @@ import "./rondascorp.css";
 import { api } from "../../services/api";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
+const TIMEZONE_BR = "America/Sao_Paulo";
 
 export default function RondasCorp() {
   const [rondas, setRondas] = useState([]);
@@ -20,59 +21,49 @@ export default function RondasCorp() {
   const refreshTimer = useRef(null);
 
   /* =====================================================
-     🔄 CARREGAMENTO DE DADOS (CORRIGIDO)
+     🔄 CARREGAMENTO DE DADOS (CORRETO)
   ===================================================== */
-  async function carregarDados({ silent = false, resetOffset = false } = {}) {
-  try {
-    const finalOffset = resetOffset ? 0 : offset;
+  async function carregarDados({ silent = false, forceOffset = null } = {}) {
+    try {
+      if (!silent) setLoading(true);
 
-    if (resetOffset && offset !== 0) {
-      setOffset(0);
+      const params = {
+        limit,
+        offset: forceOffset !== null ? forceOffset : offset,
+      };
+
+      if (dataInicio) params.dataInicio = dataInicio;
+      if (dataFim) params.dataFim = dataFim;
+      if (roteiro) params.roteiro = roteiro;
+
+      const [rondasRes, syncRes] = await Promise.all([
+        api.get("/rondas", { params }),
+        api.get("/rondas/ultima-sincronizacao"),
+      ]);
+
+      setRondas(rondasRes.data);
+      setSyncInfo(syncRes.data);
+    } catch (err) {
+      console.error("[RONDAS]", err);
+    } finally {
+      if (!silent) setLoading(false);
     }
-
-    if (!silent) setLoading(true);
-
-    const params = {
-      limit,
-      offset: finalOffset,
-
-      // 🔥 CACHE BUSTER (RESOLVE O PROBLEMA)
-      _ts: Date.now(),
-    };
-
-    if (dataInicio) params.dataInicio = dataInicio;
-    if (dataFim) params.dataFim = dataFim;
-    if (roteiro) params.roteiro = roteiro;
-
-    const [rondasRes, syncRes] = await Promise.all([
-      api.get("/rondas", { params }),
-      api.get("/rondas/ultima-sincronizacao", {
-        params: { _ts: Date.now() },
-      }),
-    ]);
-
-    setRondas(rondasRes.data);
-    setSyncInfo(syncRes.data);
-  } catch (err) {
-    console.error("[RONDAS]", err);
-  } finally {
-    if (!silent) setLoading(false);
   }
-}
-
 
   /* =====================================================
      🎯 FILTROS
   ===================================================== */
   function aplicarFiltro() {
-    carregarDados({ resetOffset: true });
+    setOffset(0);
+    carregarDados({ forceOffset: 0 });
   }
 
   function limparFiltro() {
     setDataInicio("");
     setDataFim("");
     setRoteiro("");
-    carregarDados({ resetOffset: true });
+    setOffset(0);
+    carregarDados({ forceOffset: 0 });
   }
 
   /* =====================================================
@@ -112,10 +103,11 @@ export default function RondasCorp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset]);
 
-  // Auto-refresh REAL (sempre busca os mais recentes)
+  // Auto-refresh (sempre volta para os mais recentes)
   useEffect(() => {
     refreshTimer.current = setInterval(() => {
-      carregarDados({ silent: true, resetOffset: true });
+      setOffset(0);
+      carregarDados({ silent: true, forceOffset: 0 });
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(refreshTimer.current);
@@ -128,6 +120,7 @@ export default function RondasCorp() {
   return (
     <div className="rondas-wrapper">
       <div className="rondas-container">
+        {/* HEADER */}
         <header className="rondas-header">
           <div>
             <h1>Rondas – Hospital</h1>
@@ -135,22 +128,23 @@ export default function RondasCorp() {
               <span className="sync-status">
                 Última sincronização:{" "}
                 <strong>
-                  {new Date(syncInfo.last_sync_at).toLocaleString()}
+                  {new Date(syncInfo.last_sync_at).toLocaleString("pt-BR", {
+                    timeZone: TIMEZONE_BR,
+                  })}
                 </strong>
               </span>
             )}
           </div>
 
           <div className="actions">
-            <button onClick={() => carregarDados({ resetOffset: true })}>
-              Atualizar
-            </button>
+            <button onClick={() => aplicarFiltro()}>Atualizar</button>
             <button className="primary" onClick={exportarCsv}>
               Exportar CSV
             </button>
           </div>
         </header>
 
+        {/* FILTROS */}
         <section className="rondas-filter-card">
           <div className="filter-fields">
             <div className="filter-field">
@@ -192,6 +186,7 @@ export default function RondasCorp() {
           </div>
         </section>
 
+        {/* TABELA */}
         <section className="table-card">
           <div className="table-wrapper">
             {loading ? (
@@ -216,7 +211,9 @@ export default function RondasCorp() {
                       <td>{r.nome_guarda}</td>
                       <td>
                         {r.hora_chegada
-                          ? new Date(r.hora_chegada).toLocaleString()
+                          ? new Date(r.hora_chegada).toLocaleString("pt-BR", {
+                              timeZone: TIMEZONE_BR,
+                            })
                           : "-"}
                       </td>
                     </tr>
@@ -227,6 +224,7 @@ export default function RondasCorp() {
           </div>
         </section>
 
+        {/* PAGINAÇÃO */}
         <footer className="pagination">
           <button
             disabled={offset === 0}
