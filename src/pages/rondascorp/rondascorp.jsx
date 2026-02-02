@@ -12,7 +12,7 @@ export default function RondasCorp() {
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
-  // 📅 filtros
+  // filtros
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [roteiro, setRoteiro] = useState("");
@@ -20,18 +20,23 @@ export default function RondasCorp() {
   const refreshTimer = useRef(null);
 
   /* =====================================================
-     🔄 CARREGAMENTO DE DADOS
+     🔄 CARREGAMENTO DE DADOS (CORRIGIDO)
   ===================================================== */
   async function carregarDados({ silent = false, resetOffset = false } = {}) {
     try {
-      if (resetOffset) {
+      const finalOffset = resetOffset ? 0 : offset;
+
+      // mantém estado sincronizado
+      if (resetOffset && offset !== 0) {
         setOffset(0);
-        return; // useEffect será disparado novamente
       }
 
       if (!silent) setLoading(true);
 
-      const params = { limit, offset };
+      const params = {
+        limit,
+        offset: finalOffset,
+      };
 
       if (dataInicio) params.dataInicio = dataInicio;
       if (dataFim) params.dataFim = dataFim;
@@ -55,14 +60,14 @@ export default function RondasCorp() {
      🎯 FILTROS
   ===================================================== */
   function aplicarFiltro() {
-    setOffset(0);
+    carregarDados({ resetOffset: true });
   }
 
   function limparFiltro() {
     setDataInicio("");
     setDataFim("");
     setRoteiro("");
-    setOffset(0);
+    carregarDados({ resetOffset: true });
   }
 
   /* =====================================================
@@ -96,18 +101,20 @@ export default function RondasCorp() {
      ⚡ EFEITOS
   ===================================================== */
 
-  // Sempre que offset ou filtros mudarem
+  // Paginação
   useEffect(() => {
     carregarDados();
-  }, [offset, dataInicio, dataFim, roteiro]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offset]);
 
-  // Auto-refresh SEMPRE volta para os mais recentes
+  // Auto-refresh REAL (sempre busca os mais recentes)
   useEffect(() => {
     refreshTimer.current = setInterval(() => {
       carregarDados({ silent: true, resetOffset: true });
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(refreshTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* =====================================================
@@ -116,7 +123,6 @@ export default function RondasCorp() {
   return (
     <div className="rondas-wrapper">
       <div className="rondas-container">
-        {/* ================= HEADER ================= */}
         <header className="rondas-header">
           <div>
             <h1>Rondas – Hospital</h1>
@@ -140,7 +146,6 @@ export default function RondasCorp() {
           </div>
         </header>
 
-        {/* ================= FILTRO ================= */}
         <section className="rondas-filter-card">
           <div className="filter-fields">
             <div className="filter-field">
@@ -182,7 +187,6 @@ export default function RondasCorp() {
           </div>
         </section>
 
-        {/* ================= TABELA ================= */}
         <section className="table-card">
           <div className="table-wrapper">
             {loading ? (
@@ -218,7 +222,6 @@ export default function RondasCorp() {
           </div>
         </section>
 
-        {/* ================= PAGINAÇÃO ================= */}
         <footer className="pagination">
           <button
             disabled={offset === 0}
