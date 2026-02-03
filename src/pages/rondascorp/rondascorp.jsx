@@ -23,10 +23,10 @@ export default function RondasCorp() {
   const [syncInfo, setSyncInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // filtros
+  // 🔎 filtros
   const [dataInicio, setDataInicio] = useState("");
-  const [dataFim, setDataFim] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
   const [horaFim, setHoraFim] = useState("");
   const [roteiro, setRoteiro] = useState("");
 
@@ -44,11 +44,20 @@ export default function RondasCorp() {
         offset: 0,
       };
 
-      if (dataInicio) params.dataInicio = dataInicio;
-      if (dataFim) params.dataFim = dataFim;
-      if (horaInicio) params.horaInicio = horaInicio;
-      if (horaFim) params.horaFim = horaFim;
-      if (roteiro) params.roteiro = roteiro;
+      // 🔥 regras intuitivas de filtro
+      if (dataInicio) {
+        params.dataInicio = dataInicio;
+        params.horaInicio = horaInicio || "00:00";
+      }
+
+      if (dataFim) {
+        params.dataFim = dataFim;
+        params.horaFim = horaFim || "23:59";
+      }
+
+      if (roteiro) {
+        params.roteiro = roteiro;
+      }
 
       const [rondasRes, syncRes] = await Promise.all([
         api.get("/rondas", { params }),
@@ -73,8 +82,8 @@ export default function RondasCorp() {
 
   function limparFiltro() {
     setDataInicio("");
-    setDataFim("");
     setHoraInicio("");
+    setDataFim("");
     setHoraFim("");
     setRoteiro("");
     carregarDados();
@@ -85,10 +94,17 @@ export default function RondasCorp() {
   ===================================================== */
   function exportarCsv() {
     const params = {};
-    if (dataInicio) params.dataInicio = dataInicio;
-    if (dataFim) params.dataFim = dataFim;
-    if (horaInicio) params.horaInicio = horaInicio;
-    if (horaFim) params.horaFim = horaFim;
+
+    if (dataInicio) {
+      params.dataInicio = dataInicio;
+      params.horaInicio = horaInicio || "00:00";
+    }
+
+    if (dataFim) {
+      params.dataFim = dataFim;
+      params.horaFim = horaFim || "23:59";
+    }
+
     if (roteiro) params.roteiro = roteiro;
 
     api
