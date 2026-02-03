@@ -7,29 +7,32 @@ const LIMIT_MAX = 5000;
 
 /**
  * =====================================================
- * FORMATA DATA/HORA SEM CONVERTER TIMEZONE
+ * FORMATA hora_chegada SEM CONVERTER TIMEZONE
  *
- * Entrada:
- * 2026-02-02 17:14:16.167
+ * Aceita:
+ * - 2026-02-02 17:14:16.167
+ * - 2026-02-02T17:14:16.167Z
  *
- * Saída:
- * 02/02/2026 17:14:16
+ * Retorna:
+ * - 02/02/2026 17:14:16
  * =====================================================
  */
-function formatarDataHora(valor) {
+function formatarHoraChegada(valor) {
   if (!valor) return "-";
 
-  // Remove milissegundos se existirem
-  const [data, hora] = valor.replace("T", " ").split(".");
+  const limpo = valor.replace("T", " ").replace("Z", "").split(".")[0];
+
+  const [data, hora] = limpo.split(" ");
   if (!data || !hora) return valor;
 
   const [yyyy, mm, dd] = data.split("-");
+  if (!yyyy || !mm || !dd) return valor;
+
   return `${dd}/${mm}/${yyyy} ${hora}`;
 }
 
 export default function RondasCorp() {
   const [rondas, setRondas] = useState([]);
-  const [syncInfo, setSyncInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // 🔎 filtros
@@ -53,12 +56,6 @@ export default function RondasCorp() {
         offset: 0,
       };
 
-      /**
-       * Regras:
-       * - Data define o dia
-       * - Hora é opcional
-       * - Hora vazia assume início/fim do dia
-       */
       if (dataInicio) {
         params.dataInicio = dataInicio;
         params.horaInicio = horaInicio || "00:00";
@@ -73,13 +70,8 @@ export default function RondasCorp() {
         params.roteiro = roteiro;
       }
 
-      const [rondasRes, syncRes] = await Promise.all([
-        api.get("/rondas", { params }),
-        api.get("/rondas/ultima-sincronizacao"),
-      ]);
-
-      setRondas(rondasRes.data);
-      setSyncInfo(syncRes.data);
+      const res = await api.get("/rondas", { params });
+      setRondas(res.data);
     } catch (err) {
       console.error("[RONDAS]", err);
     } finally {
@@ -164,15 +156,7 @@ export default function RondasCorp() {
       <div className="rondas-container">
         {/* ================= HEADER ================= */}
         <header className="rondas-header">
-          <div>
-            <h1>Rondas – Hospital</h1>
-            {syncInfo && (
-              <span className="sync-status">
-                Última sincronização:{" "}
-                <strong>{formatarDataHora(syncInfo.last_sync_at)}</strong>
-              </span>
-            )}
-          </div>
+          <h1>Rondas – Hospital</h1>
 
           <div className="actions">
             <button onClick={aplicarFiltro}>Atualizar</button>
@@ -265,7 +249,7 @@ export default function RondasCorp() {
                       <td>{r.nome_roteiro}</td>
                       <td>{r.nome_cliente}</td>
                       <td>{r.nome_guarda}</td>
-                      <td>{formatarDataHora(r.hora_chegada)}</td>
+                      <td>{formatarHoraChegada(r.hora_chegada)}</td>
                     </tr>
                   ))}
                 </tbody>
