@@ -21,8 +21,8 @@ function formatarHoraChegada(valor) {
   if (!valor) return "-";
 
   const limpo = valor.replace("T", " ").replace("Z", "").split(".")[0];
-
   const [data, hora] = limpo.split(" ");
+
   if (!data || !hora) return valor;
 
   const [yyyy, mm, dd] = data.split("-");
