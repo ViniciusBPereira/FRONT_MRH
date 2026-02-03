@@ -6,16 +6,25 @@ const REFRESH_INTERVAL = 5 * 60 * 1000;
 const LIMIT_MAX = 5000;
 
 /**
- * Formata timestamp vindo do backend
- * 👉 NÃO altera timezone
+ * =====================================================
+ * FORMATA DATA/HORA SEM CONVERTER TIMEZONE
+ *
+ * Entrada:
+ * 2026-02-02 17:14:16.167
+ *
+ * Saída:
+ * 02/02/2026 17:14:16
+ * =====================================================
  */
 function formatarDataHora(valor) {
   if (!valor) return "-";
 
-  const d = new Date(valor);
-  if (isNaN(d.getTime())) return valor;
+  // Remove milissegundos se existirem
+  const [data, hora] = valor.replace("T", " ").split(".");
+  if (!data || !hora) return valor;
 
-  return d.toLocaleString("pt-BR");
+  const [yyyy, mm, dd] = data.split("-");
+  return `${dd}/${mm}/${yyyy} ${hora}`;
 }
 
 export default function RondasCorp() {
@@ -45,8 +54,9 @@ export default function RondasCorp() {
       };
 
       /**
-       * Regras INTUITIVAS:
-       * - Se informar data → hora opcional
+       * Regras:
+       * - Data define o dia
+       * - Hora é opcional
        * - Hora vazia assume início/fim do dia
        */
       if (dataInicio) {
