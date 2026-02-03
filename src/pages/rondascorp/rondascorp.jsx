@@ -7,7 +7,7 @@ const LIMIT_MAX = 5000;
 
 /**
  * Formata timestamp vindo do backend
- * 👉 NÃO altera timezone do valor original
+ * 👉 NÃO altera timezone
  */
 function formatarDataHora(valor) {
   if (!valor) return "-";
@@ -44,7 +44,11 @@ export default function RondasCorp() {
         offset: 0,
       };
 
-      // 🔥 regras intuitivas de filtro
+      /**
+       * Regras INTUITIVAS:
+       * - Se informar data → hora opcional
+       * - Hora vazia assume início/fim do dia
+       */
       if (dataInicio) {
         params.dataInicio = dataInicio;
         params.horaInicio = horaInicio || "00:00";
@@ -105,7 +109,9 @@ export default function RondasCorp() {
       params.horaFim = horaFim || "23:59";
     }
 
-    if (roteiro) params.roteiro = roteiro;
+    if (roteiro) {
+      params.roteiro = roteiro;
+    }
 
     api
       .get("/rondas/export/csv", {
