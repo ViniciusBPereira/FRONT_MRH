@@ -3,8 +3,20 @@ import "./rondascorp.css";
 import { api } from "../../services/api";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
-const TIMEZONE_BR = "America/Sao_Paulo";
-const LIMIT_MAX = 5000; // 🔥 traz tudo
+const LIMIT_MAX = 5000;
+
+/**
+ * Formata timestamp vindo do backend
+ * 👉 NÃO altera timezone do valor original
+ */
+function formatarDataHora(valor) {
+  if (!valor) return "-";
+
+  const d = new Date(valor);
+  if (isNaN(d.getTime())) return valor;
+
+  return d.toLocaleString("pt-BR");
+}
 
 export default function RondasCorp() {
   const [rondas, setRondas] = useState([]);
@@ -14,21 +26,28 @@ export default function RondasCorp() {
   // filtros
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [horaInicio, setHoraInicio] = useState("");
+  const [horaFim, setHoraFim] = useState("");
   const [roteiro, setRoteiro] = useState("");
 
   const refreshTimer = useRef(null);
 
+  /* =====================================================
+     🔄 CARREGAMENTO DE DADOS
+  ===================================================== */
   async function carregarDados(silent = false) {
     try {
       if (!silent) setLoading(true);
 
       const params = {
-        limit: LIMIT_MAX, // 🔥 sem paginação
+        limit: LIMIT_MAX,
         offset: 0,
       };
 
       if (dataInicio) params.dataInicio = dataInicio;
       if (dataFim) params.dataFim = dataFim;
+      if (horaInicio) params.horaInicio = horaInicio;
+      if (horaFim) params.horaFim = horaFim;
       if (roteiro) params.roteiro = roteiro;
 
       const [rondasRes, syncRes] = await Promise.all([
@@ -45,6 +64,9 @@ export default function RondasCorp() {
     }
   }
 
+  /* =====================================================
+     🎯 FILTROS
+  ===================================================== */
   function aplicarFiltro() {
     carregarDados();
   }
@@ -52,14 +74,21 @@ export default function RondasCorp() {
   function limparFiltro() {
     setDataInicio("");
     setDataFim("");
+    setHoraInicio("");
+    setHoraFim("");
     setRoteiro("");
     carregarDados();
   }
 
+  /* =====================================================
+     📥 EXPORTAÇÃO CSV
+  ===================================================== */
   function exportarCsv() {
     const params = {};
     if (dataInicio) params.dataInicio = dataInicio;
     if (dataFim) params.dataFim = dataFim;
+    if (horaInicio) params.horaInicio = horaInicio;
+    if (horaFim) params.horaFim = horaFim;
     if (roteiro) params.roteiro = roteiro;
 
     api
@@ -80,6 +109,9 @@ export default function RondasCorp() {
       });
   }
 
+  /* =====================================================
+     ⚡ EFEITOS
+  ===================================================== */
   useEffect(() => {
     carregarDados();
   }, []);
@@ -92,20 +124,20 @@ export default function RondasCorp() {
     return () => clearInterval(refreshTimer.current);
   }, []);
 
+  /* =====================================================
+     🖥️ RENDER
+  ===================================================== */
   return (
     <div className="rondas-wrapper">
       <div className="rondas-container">
+        {/* ================= HEADER ================= */}
         <header className="rondas-header">
           <div>
             <h1>Rondas – Hospital</h1>
             {syncInfo && (
               <span className="sync-status">
                 Última sincronização:{" "}
-                <strong>
-                  {new Date(syncInfo.last_sync_at).toLocaleString("pt-BR", {
-                    timeZone: TIMEZONE_BR,
-                  })}
-                </strong>
+                <strong>{formatarDataHora(syncInfo.last_sync_at)}</strong>
               </span>
             )}
           </div>
@@ -118,6 +150,67 @@ export default function RondasCorp() {
           </div>
         </header>
 
+        {/* ================= FILTROS ================= */}
+        <section className="rondas-filter-card">
+          <div className="filter-fields">
+            <div className="filter-field">
+              <label>Data início</label>
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-field">
+              <label>Hora início</label>
+              <input
+                type="time"
+                value={horaInicio}
+                onChange={(e) => setHoraInicio(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-field">
+              <label>Data fim</label>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-field">
+              <label>Hora fim</label>
+              <input
+                type="time"
+                value={horaFim}
+                onChange={(e) => setHoraFim(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-field filter-roteiro">
+              <label>Roteiro</label>
+              <input
+                type="text"
+                placeholder="Contém..."
+                value={roteiro}
+                onChange={(e) => setRoteiro(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="filter-actions">
+            <button className="btn-filter" onClick={aplicarFiltro}>
+              Filtrar
+            </button>
+            <button className="btn-clear" onClick={limparFiltro}>
+              Limpar
+            </button>
+          </div>
+        </section>
+
+        {/* ================= TABELA ================= */}
         <section className="table-card">
           <div className="table-wrapper">
             {loading ? (
@@ -130,7 +223,7 @@ export default function RondasCorp() {
                     <th>Roteiro</th>
                     <th>Cliente</th>
                     <th>Guarda</th>
-                    <th>Hora Chegada</th>
+                    <th>Hora chegada</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -140,7 +233,7 @@ export default function RondasCorp() {
                       <td>{r.nome_roteiro}</td>
                       <td>{r.nome_cliente}</td>
                       <td>{r.nome_guarda}</td>
-                     <td>{r.hora_chegada}</td>
+                      <td>{formatarDataHora(r.hora_chegada)}</td>
                     </tr>
                   ))}
                 </tbody>
