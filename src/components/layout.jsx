@@ -8,23 +8,14 @@ export default function Layout({ children }) {
 
   return (
     <SidebarContext.Provider value={{ minimized, setMinimized }}>
-      <div
-        className="layout-container"
-        style={{
-          "--sidebar-width": minimized ? "60px" : "260px",
-          "--content-width": minimized
-            ? "calc(100vw - 60px)"
-            : "calc(100vw - 260px)",
-        }}
-      >
-        <Sidebar
-          minimized={minimized}
-          setMinimized={setMinimized}
-          className="sidebar"
-        />
+      <div className="layout-container">
+  <Sidebar
+    minimized={minimized}
+    setMinimized={setMinimized}
+  />
+  <main className="layout-content">{children}</main>
+</div>
 
-        <main className="layout-content">{children}</main>
-      </div>
     </SidebarContext.Provider>
   );
 }
