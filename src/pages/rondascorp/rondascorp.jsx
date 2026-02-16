@@ -32,6 +32,12 @@ function formatarHoraChegada(valor) {
 }
 
 export default function RondasCorp() {
+  useEffect(() => {
+    document.body.classList.add("hide-sidebar");
+    return () => {
+      document.body.classList.remove("hide-sidebar");
+    };
+  }, []);
   const [rondas, setRondas] = useState([]);
   const [loading, setLoading] = useState(true);
 
