@@ -4,8 +4,16 @@
 ================================ */
 body.hide-sidebar .sidebar {
   transform: translateX(-120%);
-  opacity: 0;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+
+  box-shadow: none !important;
+  border: none !important;
+
   pointer-events: none;
+  opacity: 0;
 }
 
 /* Ajusta conteúdo SOMENTE nessa página */
