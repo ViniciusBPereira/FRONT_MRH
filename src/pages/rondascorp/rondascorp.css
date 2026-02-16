@@ -1,14 +1,14 @@
 /* ===============================
-   REMOVE SIDEBAR SÓ NESSA PÁGINA
-================================ */
-/* ===============================
    ESCONDE SIDEBAR APENAS NA RONDAS
+   (funciona com position: fixed)
 ================================ */
 body.hide-sidebar .sidebar {
-  display: none !important;
+  transform: translateX(-120%);
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* Ajusta o conteúdo para full width */
+/* Ajusta conteúdo SOMENTE nessa página */
 body.hide-sidebar .layout-content {
   margin-left: 0 !important;
   width: 100vw !important;
@@ -16,13 +16,6 @@ body.hide-sidebar .layout-content {
   padding: 0 !important;
 }
 
-
-.layout-content {
-  margin-left: 0 !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  padding: 0 !important;
-}
 
 /* =========================================================
    📌 WRAPPER GERAL
