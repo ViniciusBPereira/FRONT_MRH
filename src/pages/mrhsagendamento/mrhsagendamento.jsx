@@ -12,18 +12,14 @@ export default function MRHsAgendamento() {
   const [loading, setLoading] = useState(true);
   const listaRef = useRef([]);
 
-  /* ===== CONTROLE DE EDIÇÃO INLINE ===== */
   const [editando, setEditando] = useState({});
 
-  /* ===== AUTH HEADER ===== */
   const authHeader = () => {
     const token = localStorage.getItem("token");
-    return {
-      Authorization: token ? `Bearer ${token}` : "",
-    };
+    return { Authorization: token ? `Bearer ${token}` : "" };
   };
 
-  /* ===== COMPARAÇÃO ===== */
+  /* ================= COMPARAÇÃO ================= */
   function dadosMudaram(novos, antigos) {
     if (novos.length !== antigos.length) return true;
 
@@ -36,7 +32,9 @@ export default function MRHsAgendamento() {
         n.exame !== a.exame ||
         n.uniformes !== a.uniformes ||
         n.data_integracao !== a.data_integracao ||
-        n.data_admissao !== a.data_admissao
+        n.data_admissao !== a.data_admissao ||
+        n.observacao !== a.observacao ||
+        n.manter !== a.manter
       ) {
         return true;
       }
@@ -44,7 +42,7 @@ export default function MRHsAgendamento() {
     return false;
   }
 
-  /* ===== FETCH ===== */
+  /* ================= FETCH ================= */
   const carregar = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -54,6 +52,7 @@ export default function MRHsAgendamento() {
       });
 
       const dados = res.data;
+
       if (!Array.isArray(dados)) return;
 
       if (dadosMudaram(dados, listaRef.current)) {
@@ -61,7 +60,7 @@ export default function MRHsAgendamento() {
         setLista(dados);
       }
     } catch (err) {
-      console.error("❌ Erro ao carregar agendamentos:", err);
+      console.error("Erro ao carregar agendamentos:", err);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -76,20 +75,18 @@ export default function MRHsAgendamento() {
     return () => clearInterval(loop);
   }, [carregar]);
 
-  /* ===== AUTO SAVE ===== */
-  async function salvarCampo(mrh, campo, valor) {
+  /* ================= AUTO SAVE ================= */
+  async function salvarLinha(mrh, dados) {
     try {
-      await api.patch(
-        `/mrhsagendamento/${campo}/${mrh}`,
-        { valor },
-        { headers: authHeader() }
-      );
+      await api.patch(`/mrhsagendamento/${mrh}`, dados, {
+        headers: authHeader(),
+      });
     } catch (err) {
-      console.error(`[AGENDAMENTO] Erro ao salvar ${campo}`, err);
+      console.error("Erro ao salvar:", err);
     }
   }
 
-  /* ===== INPUT PADRÃO ===== */
+  /* ================= INPUT ================= */
   const renderInput = (campo) => (params) => {
     const mrh = params.row.mrh;
 
@@ -109,10 +106,12 @@ export default function MRHsAgendamento() {
         onBlur={() => {
           const valor = editando[`${campo}_${mrh}`] ?? params.value ?? "";
 
-          salvarCampo(mrh, campo, valor);
+          const novaLinha = { ...params.row, [campo]: valor };
+
+          salvarLinha(mrh, novaLinha);
 
           setLista((prev) =>
-            prev.map((i) => (i.mrh === mrh ? { ...i, [campo]: valor } : i))
+            prev.map((i) => (i.mrh === mrh ? novaLinha : i))
           );
         }}
         className="inline-input"
@@ -120,7 +119,41 @@ export default function MRHsAgendamento() {
     );
   };
 
-  /* ===== EXPORTAÇÃO EXCEL (.xlsx) ===== */
+  /* ================= CHECKBOX ================= */
+  const renderCheckbox = (params) => {
+    const mrh = params.row.mrh;
+
+    return (
+      <input
+        type="checkbox"
+        checked={params.value ?? true}
+        onChange={(e) => {
+          const valor = e.target.checked;
+
+          const novaLinha = { ...params.row, manter: valor };
+
+          salvarLinha(mrh, novaLinha);
+
+          setLista((prev) =>
+            prev.map((i) => (i.mrh === mrh ? novaLinha : i))
+          );
+        }}
+      />
+    );
+  };
+
+  /* ================= CONCLUIR ================= */
+  async function concluirSelecionados() {
+    try {
+      await api.patch("/mrhsagendamento/concluir", {}, { headers: authHeader() });
+
+      carregar();
+    } catch (err) {
+      console.error("Erro ao concluir agendamentos:", err);
+    }
+  }
+
+  /* ================= EXPORTAR ================= */
   async function exportarExcel() {
     if (!lista.length) return;
 
@@ -138,39 +171,30 @@ export default function MRHsAgendamento() {
       { header: "Uniformes", key: "uniformes", width: 40 },
       { header: "Integração", key: "data_integracao", width: 18 },
       { header: "Admissão", key: "data_admissao", width: 18 },
+      { header: "Observação", key: "observacao", width: 40 },
     ];
 
-    lista.forEach((item) => {
-      sheet.addRow({
-        mrh: item.mrh,
-        nome_colaborador: item.nome_colaborador,
-        cpf_colaborador: item.cpf_colaborador,
-        funcao: item.funcao,
-        empresa: item.empresa,
-        cr: item.cr,
-        exame: item.exame,
-        uniformes: item.uniformes,
-        data_integracao: item.data_integracao,
-        data_admissao: item.data_admissao,
-      });
-    });
+    lista.forEach((item) => sheet.addRow(item));
 
     sheet.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
+
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
     a.download = `agendamento_${new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
+
     URL.revokeObjectURL(url);
   }
 
-  /* ===== COLUNAS ===== */
+  /* ================= COLUNAS ================= */
   const colunas = [
     { field: "mrh", headerName: "MRH", flex: 0.5 },
     { field: "nome_colaborador", headerName: "Colaborador", flex: 1.3 },
@@ -178,33 +202,48 @@ export default function MRHsAgendamento() {
     { field: "funcao", headerName: "Função", flex: 1 },
     { field: "empresa", headerName: "Empresa", flex: 1.3 },
     { field: "cr", headerName: "CR", flex: 1.3 },
+
     {
       field: "exame",
       headerName: "Exame",
       flex: 1,
-      sortable: false,
       renderCell: renderInput("exame"),
     },
+
     {
       field: "uniformes",
       headerName: "Uniformes",
       flex: 1.5,
-      sortable: false,
       renderCell: renderInput("uniformes"),
     },
+
     {
       field: "data_integracao",
       headerName: "Integração",
       flex: 1,
-      sortable: false,
       renderCell: renderInput("data_integracao"),
     },
+
     {
       field: "data_admissao",
       headerName: "Admissão",
       flex: 1,
-      sortable: false,
       renderCell: renderInput("data_admissao"),
+    },
+
+    {
+      field: "observacao",
+      headerName: "Observação",
+      flex: 2,
+      renderCell: renderInput("observacao"),
+    },
+
+    {
+      field: "manter",
+      headerName: "Manter",
+      width: 90,
+      align: "center",
+      renderCell: renderCheckbox,
     },
   ];
 
@@ -219,9 +258,15 @@ export default function MRHsAgendamento() {
           <button
             className="btn-export-excel"
             onClick={exportarExcel}
-            title="Exportar para Excel"
           >
             Exportar
+          </button>
+
+          <button
+            className="btn-concluir"
+            onClick={concluirSelecionados}
+          >
+            Concluir
           </button>
         </div>
 
@@ -233,11 +278,11 @@ export default function MRHsAgendamento() {
             }))}
             columns={colunas}
             loading={loading}
-            disableRowSelectionOnClick
             density="compact"
             pageSizeOptions={[30]}
             rowHeight={44}
             headerHeight={36}
+            disableRowSelectionOnClick
           />
         </div>
       </div>
