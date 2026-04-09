@@ -10,7 +10,7 @@ import CandidatosMRH from "./pages/candidatos/candidatosMRH";
 import CandidatosCadastrados from "./pages/cadidatosregistrados/candidatoscadastrados";
 import RondasCorp from "./pages/rondascorp/rondascorp";
 import RondasCorpLogin from "./pages/rondascorpLogin/rondascorplogin";
-import NPSMonitor from "./pages/npsmonitor/NPSMonitor";
+import NPSMonitor from "./pages/nps/npsmonitor";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
