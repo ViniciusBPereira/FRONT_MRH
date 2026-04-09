@@ -1,24 +1,37 @@
-/* ===== RESET LOCAL (evita conflito global) ===== */
-.nps-wrapper * {
-  color: inherit;
+/* ================= RESET GLOBAL ================= */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-/* ===== FULL SCREEN ===== */
+/* ================= WRAPPER ================= */
 .nps-wrapper {
   background: #f4f6f8;
   min-height: 100vh;
-  width: 100%;
-  padding: 20px;
+  width: 100vw;
+  padding: 24px;
   box-sizing: border-box;
 }
 
-/* 🔥 REMOVE LIMITE */
+/* ================= REMOVE SIDEBAR ================= */
+.hide-sidebar .sidebar {
+  display: none !important;
+}
+
+.hide-sidebar .content {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* ================= CONTAINER ================= */
 .nps-container {
   width: 100%;
   max-width: 100%;
 }
 
-/* ===== HEADER ===== */
+/* ================= HEADER ================= */
 .nps-header {
   display: flex;
   justify-content: space-between;
@@ -28,6 +41,7 @@
 
 .nps-header h1 {
   color: #111827;
+  font-size: 22px;
 }
 
 .badge-live {
@@ -35,7 +49,7 @@
   font-weight: bold;
 }
 
-/* ===== CARD ===== */
+/* ================= CARD ================= */
 .table-card {
   background: #ffffff;
   border-radius: 12px;
@@ -43,7 +57,7 @@
   box-shadow: 0 6px 24px rgba(0,0,0,0.06);
 }
 
-/* ===== TABLE ===== */
+/* ================= TABLE ================= */
 .table-wrapper {
   overflow-x: auto;
 }
@@ -51,7 +65,7 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: #ffffff;
 }
 
 /* HEADER */
@@ -60,23 +74,29 @@ thead {
 }
 
 thead th {
-  color: #ffffff;
+  color: #ffffff !important;
   font-weight: 600;
+  font-size: 13px;
 }
 
-/* 🔥 FORÇA TEXTO ESCURO */
-tbody td {
-  color: #1f2937; /* cinza escuro */
-  font-size: 14px;
+/* ================= 🔥 CORREÇÃO DO AZUL ================= */
+.nps-wrapper td,
+.nps-wrapper th,
+.nps-wrapper span,
+.nps-wrapper a {
+  background: transparent !important;
+  color: #1f2937 !important;
+  text-decoration: none !important;
 }
 
-/* CELULAS */
+/* ================= CELULAS ================= */
 th, td {
   padding: 12px;
   text-align: left;
+  font-size: 14px;
 }
 
-/* LINHAS */
+/* ================= LINHAS ================= */
 tbody tr {
   border-bottom: 1px solid #e5e7eb;
   transition: 0.2s;
@@ -86,7 +106,7 @@ tbody tr:hover {
   background: #f3f4f6;
 }
 
-/* ===== NOTAS ===== */
+/* ================= NOTAS ================= */
 .nota.alta {
   color: #16a34a !important;
   font-weight: bold;
@@ -102,10 +122,15 @@ tbody tr:hover {
   font-weight: bold;
 }
 
-/* ===== LOADING ===== */
+/* ================= LOADING ================= */
 .loading {
   text-align: center;
   padding: 40px;
   color: #6b7280;
   font-size: 16px;
+}
+
+/* ================= REMOVE SELEÇÃO AZUL ================= */
+.nps-wrapper *::selection {
+  background: rgba(0,0,0,0.05);
 }
