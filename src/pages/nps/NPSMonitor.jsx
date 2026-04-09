@@ -25,7 +25,7 @@ const LinhaNPS = memo(({ nps }) => {
 
   return (
     <tr>
-      <td>{nps.id.slice(0, 6)}</td>
+      <td>{nps.id ? String(nps.id).slice(0, 6) : "-"}</td>
       <td>{nps.nome_respondente}</td>
       <td>{nps.email_respondente}</td>
       <td>{nps.grupo_cliente}</td>
