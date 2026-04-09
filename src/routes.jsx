@@ -10,6 +10,7 @@ import CandidatosMRH from "./pages/candidatos/candidatosMRH";
 import CandidatosCadastrados from "./pages/cadidatosregistrados/candidatoscadastrados";
 import RondasCorp from "./pages/rondascorp/rondascorp";
 import RondasCorpLogin from "./pages/rondascorpLogin/rondascorplogin";
+import NPSMonitor from "./pages/npsmonitor/NPSMonitor";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
@@ -35,6 +36,8 @@ export default function AppRoutes() {
       <Routes>
         /* ================= LOGIN PRINCIPAL ================= */
         <Route path="/" element={<Login />} />
+        /* ================= NPS MONITOR (SEM LOGIN) ================= */
+        <Route path="/nps-monitor" element={<NPSMonitor />} />
         /* ================= RONDAS CORP LOGIN ================= */
         <Route path="/rondas/login" element={<RondasCorpLogin />} />
         /* ================= RONDAS CORP (PROTEGIDO) ================= */
