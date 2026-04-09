@@ -5,13 +5,14 @@ import {
 } from "react";
 
 import { io } from "socket.io-client";
+import { api } from "../../services/api"; // ✅ IMPORTANTE
 import "./npsmonitor.css";
 
 /* ================= SOCKET ================= */
 const socket = io(import.meta.env.VITE_API_URL);
 
 /* =====================================================
-   ✅ LINHA MEMOIZADA (PERFORMANCE)
+   LINHA MEMOIZADA
 ===================================================== */
 const LinhaNPS = memo(({ nps }) => {
   const nota = Number(nps.nota);
@@ -40,7 +41,6 @@ const LinhaNPS = memo(({ nps }) => {
 ===================================================== */
 function formatarData(data) {
   if (!data) return "-";
-
   return new Date(data).toLocaleString("pt-BR");
 }
 
@@ -49,7 +49,6 @@ function formatarData(data) {
 ===================================================== */
 export default function NPSMonitor() {
 
-  /* ================= REMOVER SIDEBAR ================= */
   useEffect(() => {
     document.body.classList.add("hide-sidebar");
     return () =>
@@ -58,7 +57,34 @@ export default function NPSMonitor() {
 
   const [npsList, setNpsList] = useState([]);
 
-  /* ================= SOCKET ================= */
+  /* =====================================================
+     🔥 CARGA INICIAL (ESSENCIAL)
+  ===================================================== */
+  useEffect(() => {
+    async function carregarInicial() {
+      try {
+        const res = await api.get("/nps");
+
+        // ordena mais recente primeiro
+        const ordenado = res.data.sort(
+          (a, b) =>
+            new Date(b.respondido_em) - new Date(a.respondido_em)
+        );
+
+        // limita (performance)
+        setNpsList(ordenado.slice(0, 100));
+
+      } catch (err) {
+        console.error("[NPS] Erro inicial:", err);
+      }
+    }
+
+    carregarInicial();
+  }, []);
+
+  /* =====================================================
+     SOCKET
+  ===================================================== */
   useEffect(() => {
 
     Notification.requestPermission();
@@ -69,10 +95,15 @@ export default function NPSMonitor() {
 
     socket.on("nova-nps", (dados) => {
 
-      /* 🔥 prepend sem recriar tudo */
-      setNpsList((prev) => [...dados, ...prev]);
+      setNpsList((prev) => {
 
-      /* 🔔 notificação */
+        const novos = dados.filter(
+          (n) => !prev.some((p) => p.id === n.id)
+        );
+
+        return [...novos, ...prev].slice(0, 100);
+      });
+
       dados.forEach((nps) => {
         new Notification("Nova NPS", {
           body: `${nps.nome_respondente} • Nota ${nps.nota}`,
@@ -90,7 +121,6 @@ export default function NPSMonitor() {
   ===================================================== */
   return (
     <div className="nps-wrapper">
-
       <div className="nps-container">
 
         <header className="nps-header">
@@ -98,7 +128,6 @@ export default function NPSMonitor() {
           <span className="badge-live">● AO VIVO</span>
         </header>
 
-        {/* ================= TABELA ================= */}
         <section className="table-card">
           <div className="table-wrapper">
 
