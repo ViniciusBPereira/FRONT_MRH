@@ -62,63 +62,71 @@ html, body, #root {
   overflow-x: auto;
 }
 
-table {
+.nps-wrapper table {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
 }
 
 /* HEADER */
-thead {
+.nps-wrapper thead {
   background: #111827;
 }
 
-thead th {
-  color: #ffffff !important;
+.nps-wrapper thead th {
+  color: #ffffff;
   font-weight: 600;
   font-size: 13px;
 }
 
-/* ================= 🔥 CORREÇÃO DO AZUL ================= */
-.nps-wrapper td,
-.nps-wrapper th,
-.nps-wrapper span,
+/* ================= CORREÇÃO CONTROLADA (SEM SOBRESCREVER TUDO) ================= */
+.nps-wrapper table th,
+.nps-wrapper table td {
+  color: #1f2937;
+}
+
+/* Links */
 .nps-wrapper a {
-  background: transparent !important;
-  color: #1f2937 !important;
-  text-decoration: none !important;
+  text-decoration: none;
+}
+
+/* Caso venha estilo inline estranho */
+.nps-wrapper td[style],
+.nps-wrapper th[style] {
+  background: transparent;
 }
 
 /* ================= CELULAS ================= */
-th, td {
+.nps-wrapper th,
+.nps-wrapper td {
   padding: 12px;
   text-align: left;
   font-size: 14px;
 }
 
 /* ================= LINHAS ================= */
-tbody tr {
+.nps-wrapper tbody tr {
   border-bottom: 1px solid #e5e7eb;
   transition: 0.2s;
 }
 
-tbody tr:hover {
+.nps-wrapper tbody tr:hover {
   background: #f3f4f6;
 }
 
 /* ================= NOTAS ================= */
-.nota.alta {
-  color: #16a34a !important;
+.nps-wrapper .nota.alta {
+  color: #16a34a;
   font-weight: bold;
 }
 
-.nota.media {
-  color: #ca8a04 !important;
+.nps-wrapper .nota.media {
+  color: #ca8a04;
   font-weight: bold;
 }
 
-.nota.baixa {
-  color: #dc2626 !important;
+.nps-wrapper .nota.baixa {
+  color: #dc2626;
   font-weight: bold;
 }
 
@@ -130,7 +138,7 @@ tbody tr:hover {
   font-size: 16px;
 }
 
-/* ================= REMOVE SELEÇÃO AZUL ================= */
+/* ================= SELEÇÃO ================= */
 .nps-wrapper *::selection {
   background: rgba(0,0,0,0.05);
 }
