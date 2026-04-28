@@ -1,53 +1,36 @@
-import {
-  useEffect,
-  useState,
-  memo
-} from "react";
-
-import { io } from "socket.io-client";
-import { api } from "../../services/api"; // ✅ IMPORTANTE
+import { useState, useEffect } from "react";
 import "./npsmonitor.css";
 
-/* ================= SOCKET ================= */
-const socket = io(import.meta.env.VITE_API_URL);
-
 /* =====================================================
-   LINHA MEMOIZADA
+   DADOS MOCK (SUBSTITUA PELOS SEUS BIs)
 ===================================================== */
-const LinhaNPS = memo(({ nps }) => {
-  const nota = Number(nps.nota);
-
-  const getClass = () => {
-    if (nota >= 9) return "nota alta";
-    if (nota >= 7) return "nota media";
-    return "nota baixa";
-  };
-
-  return (
-    <tr>
-      <td>{nps.id ? String(nps.id).slice(0, 6) : "-"}</td>
-      <td>{nps.nome_respondente}</td>
-      <td>{nps.email_respondente}</td>
-      <td>{nps.grupo_cliente}</td>
-      <td>{nps.vinculado_por}</td>
-      <td className={getClass()}>{nota}</td>
-      <td>{formatarData(nps.respondido_em)}</td>
-    </tr>
-  );
-});
-
-/* =====================================================
-   FORMATADOR
-===================================================== */
-function formatarData(data) {
-  if (!data) return "-";
-  return new Date(data).toLocaleString("pt-BR");
-}
+const dashboards = [
+  {
+    id: 1,
+    nome: "Performance Operacional",
+    descricao: "SLA, contratos e execução",
+    imagem: "/imgs/performance.png"
+  },
+  {
+    id: 2,
+    nome: "Produtividade",
+    descricao: "Eficiência e tempo produtivo",
+    imagem: "/imgs/produtividade.png"
+  },
+  {
+    id: 3,
+    nome: "Planejamento",
+    descricao: "Controle e execução de agenda",
+    imagem: "/imgs/planejamento.png"
+  }
+];
 
 /* =====================================================
    COMPONENT
 ===================================================== */
 export default function NPSMonitor() {
+
+  const [ativo, setAtivo] = useState(null);
 
   useEffect(() => {
     document.body.classList.add("hide-sidebar");
@@ -55,111 +38,81 @@ export default function NPSMonitor() {
       document.body.classList.remove("hide-sidebar");
   }, []);
 
-  const [npsList, setNpsList] = useState([]);
-
-  /* =====================================================
-     🔥 CARGA INICIAL (ESSENCIAL)
-  ===================================================== */
-  useEffect(() => {
-    async function carregarInicial() {
-      try {
-        const res = await api.get("/nps");
-
-        // ordena mais recente primeiro
-        const ordenado = res.data.sort(
-          (a, b) =>
-            new Date(b.respondido_em) - new Date(a.respondido_em)
-        );
-
-        // limita (performance)
-        setNpsList(ordenado.slice(0, 100));
-
-      } catch (err) {
-        console.error("[NPS] Erro inicial:", err);
-      }
-    }
-
-    carregarInicial();
-  }, []);
-
-  /* =====================================================
-     SOCKET
-  ===================================================== */
-  useEffect(() => {
-
-    Notification.requestPermission();
-
-    socket.on("connect", () => {
-      console.log("[NPS] Socket conectado:", socket.id);
-    });
-
-    socket.on("nova-nps", (dados) => {
-
-      setNpsList((prev) => {
-
-        const novos = dados.filter(
-          (n) => !prev.some((p) => p.id === n.id)
-        );
-
-        return [...novos, ...prev].slice(0, 100);
-      });
-
-      dados.forEach((nps) => {
-        new Notification("Nova NPS", {
-          body: `${nps.nome_respondente} • Nota ${nps.nota}`,
-        });
-      });
-
-    });
-
-    return () => socket.off("nova-nps");
-
-  }, []);
-
-  /* =====================================================
-     RENDER
-  ===================================================== */
   return (
-    <div className="nps-wrapper">
+    <div className="nps-scope">
       <div className="nps-container">
 
+        {/* HEADER */}
         <header className="nps-header">
-          <h1>Monitor NPS</h1>
-          <span className="badge-live">● AO VIVO</span>
+          <h1>Analytics Experience</h1>
+          <p>Explore nossos dashboards</p>
         </header>
 
-        <section className="table-card">
-          <div className="table-wrapper">
+        {/* CATÁLOGO */}
+        {!ativo && (
+          <div className="nps-grid">
+            {dashboards.map((item) => (
+              <div
+                key={item.id}
+                className="nps-card"
+                onClick={() => setAtivo(item)}
+              >
+                <img src={item.imagem} alt={item.nome} />
 
-            {npsList.length === 0 ? (
-              <div className="loading">
-                Aguardando NPS...
+                <div className="nps-card-content">
+                  <h3>{item.nome}</h3>
+                  <p>{item.descricao}</p>
+                </div>
               </div>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Email</th>
-                    <th>Grupo</th>
-                    <th>Analista</th>
-                    <th>Nota</th>
-                    <th>Data</th>
-                  </tr>
-                </thead>
+            ))}
+          </div>
+        )}
 
-                <tbody>
-                  {npsList.map((nps) => (
-                    <LinhaNPS key={nps.id} nps={nps} />
-                  ))}
-                </tbody>
+        {/* VISUALIZAÇÃO */}
+        {ativo && (
+          <div className="nps-viewer">
 
-              </table>
-            )}
+            <button
+              className="nps-back"
+              onClick={() => setAtivo(null)}
+            >
+              ← Voltar
+            </button>
+
+            <h2>{ativo.nome}</h2>
+
+            <div className="nps-embed">
+
+              {/* 🔥 SUBSTITUIR PELO POWER BI */}
+              
+              {/* OPÇÃO 1 - IFRAME */}
+              {/*
+              <iframe
+                src="URL_DO_SEU_POWER_BI"
+                title="BI"
+                frameBorder="0"
+                allowFullScreen
+              />
+              */}
+
+              {/* OPÇÃO 2 - PREVIEW (RECOMENDADO PRA FEIRA) */}
+              <img
+                src={ativo.imagem}
+                alt="preview"
+                className="nps-preview"
+              />
+
+            </div>
+
+            <div className="nps-info">
+              <p>
+                Dashboard interativo focado em tomada de decisão
+                e análise operacional em tempo real.
+              </p>
+            </div>
 
           </div>
-        </section>
+        )}
 
       </div>
     </div>
