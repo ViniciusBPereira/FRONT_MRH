@@ -11,7 +11,7 @@ import CandidatosCadastrados from "./pages/candidatosregistrados/candidatoscadas
 import RondasCorp from "./pages/rondascorp/rondascorp";
 import RondasCorpLogin from "./pages/rondascorpLogin/rondascorplogin";
 import NPSMonitor from "./pages/nps/NPSMonitor";
-import Radar360Dashboard from "./pages/radar360/Radar360Dashboard";
+import Radar360Dashboard from "./pages/radar360/radar360dashboard";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
