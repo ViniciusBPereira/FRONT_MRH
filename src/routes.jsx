@@ -7,10 +7,11 @@ import MRHsDocumentacao from "./pages/mrhsdocumentacao/mrhsdocumentacao";
 import MRHsAgendamento from "./pages/mrhsagendamento/mrhsagendamento";
 import Indicadores from "./pages/indicadores/indicadores";
 import CandidatosMRH from "./pages/candidatos/candidatosMRH";
-import CandidatosCadastrados from "./pages/cadidatosregistrados/candidatoscadastrados";
+import CandidatosCadastrados from "./pages/candidatosregistrados/candidatoscadastrados";
 import RondasCorp from "./pages/rondascorp/rondascorp";
 import RondasCorpLogin from "./pages/rondascorpLogin/rondascorplogin";
 import NPSMonitor from "./pages/nps/NPSMonitor";
+import Radar360Dashboard from "./pages/radar360/Radar360Dashboard";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
@@ -34,13 +35,16 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        /* ================= LOGIN PRINCIPAL ================= */
+        {/* ================= LOGIN PRINCIPAL ================= */}
         <Route path="/" element={<Login />} />
-        /* ================= NPS MONITOR (SEM LOGIN) ================= */
+
+        {/* ================= NPS MONITOR (SEM LOGIN) ================= */}
         <Route path="/nps-monitor" element={<NPSMonitor />} />
-        /* ================= RONDAS CORP LOGIN ================= */
+
+        {/* ================= RONDAS CORP LOGIN ================= */}
         <Route path="/rondas/login" element={<RondasCorpLogin />} />
-        /* ================= RONDAS CORP (PROTEGIDO) ================= */
+
+        {/* ================= RONDAS CORP ================= */}
         <Route
           path="/rondas"
           element={
@@ -51,7 +55,8 @@ export default function AppRoutes() {
             </ProtectedRondasRoute>
           }
         />
-        /* ================= INDICADORES ================= */
+
+        {/* ================= INDICADORES ================= */}
         <Route
           path="/indicadores"
           element={
@@ -62,7 +67,20 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        /* ================= MRHs ================= */
+
+        {/* ================= RADAR 360 ================= */}
+        <Route
+          path="/radar360"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Radar360Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ================= MRHs ================= */}
         <Route
           path="/mrhs"
           element={
@@ -73,6 +91,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/documentacao"
           element={
@@ -83,6 +102,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/agendamento"
           element={
@@ -93,6 +113,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/candidatos"
           element={
@@ -103,6 +124,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/mrhs/:mrhId/candidatos"
           element={
@@ -113,11 +135,13 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        /* ================= FALLBACK INTELIGENTE ================= */
+
+        {/* ================= FALLBACK ================= */}
         <Route
           path="/rondas/*"
           element={<Navigate to="/rondas/login" replace />}
         />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

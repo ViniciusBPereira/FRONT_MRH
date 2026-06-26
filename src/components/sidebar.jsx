@@ -6,7 +6,9 @@ import {
   FaUsers,
   FaSignOutAlt,
   FaBars,
+  FaBullseye,
 } from "react-icons/fa";
+
 import { HiClipboardDocument } from "react-icons/hi2";
 
 import "./sidebar.css";
@@ -23,10 +25,25 @@ export default function Sidebar({ minimized, setMinimized }) {
 
   const menuItems = [
     /* ================= INDICADORES ================= */
-    { path: "/indicadores", label: "Indicadores", icon: <FaChartLine /> },
+    {
+      path: "/indicadores",
+      label: "Indicadores",
+      icon: <FaChartLine />,
+    },
+
+    /* ================= RADAR 360 ================= */
+    {
+      path: "/radar360",
+      label: "Radar 360",
+      icon: <FaBullseye />,
+    },
 
     /* ================= MRHs ================= */
-    { path: "/mrhs", label: "MRHs", icon: <FaUserCheck /> },
+    {
+      path: "/mrhs",
+      label: "MRHs",
+      icon: <FaUserCheck />,
+    },
 
     /* ================= DOCUMENTAÇÃO ================= */
     {
@@ -37,13 +54,17 @@ export default function Sidebar({ minimized, setMinimized }) {
 
     /* ================= AGENDAMENTO ================= */
     {
-      path: "/agendamento", // ✅ URL corrigida
+      path: "/agendamento",
       label: "Agendamento",
       icon: <FaCalendarCheck />,
     },
 
     /* ================= CANDIDATOS ================= */
-    { path: "/candidatos", label: "Candidatos", icon: <FaUsers /> },
+    {
+      path: "/candidatos",
+      label: "Candidatos",
+      icon: <FaUsers />,
+    },
   ];
 
   return (
@@ -64,6 +85,7 @@ export default function Sidebar({ minimized, setMinimized }) {
             }`}
           >
             <span className="icon">{item.icon}</span>
+
             <span className="label">{item.label}</span>
           </Link>
         ))}

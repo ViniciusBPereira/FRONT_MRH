@@ -1,0 +1,496 @@
+/* =====================================================
+   NOVA VISITA
+===================================================== */
+
+.nova-visita {
+  padding: 32px;
+  background: #f4f7fb;
+  min-height: 100vh;
+}
+
+.nv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.nv-header h2 {
+  margin-top: 4px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.nv-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.nv-card,
+.nv-preview {
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.nv-card h3 {
+  margin: 0 0 22px;
+  color: #1f2937;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* =====================================================
+   HEADER DOS CARDS
+===================================================== */
+
+.nv-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.nv-card-header small {
+  color: #64748b;
+  display: block;
+  margin-top: 4px;
+}
+
+.score-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  border-radius: 14px;
+  padding: 16px 22px;
+  min-width: 120px;
+  border: 1px solid #bfdbfe;
+}
+
+.score-preview span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.score-preview strong {
+  margin-top: 4px;
+  font-size: 30px;
+  color: #2563eb;
+  font-weight: 700;
+}
+/* =====================================================
+   CAMPOS DO FORMULÁRIO
+===================================================== */
+
+.nv-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.nv-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.nv-fields label.full {
+  grid-column: 1/-1;
+}
+
+.nv-fields input,
+.nv-fields select,
+.nv-fields textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: #1f2937;
+  background: #fff;
+  transition: 0.25s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.nv-fields input:hover,
+.nv-fields select:hover,
+.nv-fields textarea:hover {
+  border-color: #93c5fd;
+}
+
+.nv-fields input:focus,
+.nv-fields select:focus,
+.nv-fields textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.nv-fields textarea {
+  resize: vertical;
+  min-height: 140px;
+  line-height: 1.5;
+}
+
+.nv-fields input[type="date"] {
+  cursor: pointer;
+}
+
+.nv-fields input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.nv-fields input[type="number"]::-webkit-inner-spin-button,
+.nv-fields input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.nv-fields select {
+  cursor: pointer;
+}
+
+.nv-fields input::placeholder,
+.nv-fields textarea::placeholder {
+  color: #94a3b8;
+}
+
+.nv-fields input:disabled,
+.nv-fields textarea:disabled,
+.nv-fields select:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+/* =====================================================
+   PILARES DO DIAGNÓSTICO
+===================================================== */
+
+.pillar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  margin-top: 20px;
+}
+
+.pillar-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px;
+  transition: 0.25s;
+}
+
+.pillar-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.pillar-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 18px;
+}
+
+.pillar-score {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 12px 0 18px;
+}
+
+/* =====================================================
+   RANGE
+===================================================== */
+
+.pillar-card input[type="range"] {
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  background: transparent;
+}
+
+.pillar-card input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.pillar-card input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2563eb;
+  margin-top: -7px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.pillar-card input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.pillar-card input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.pillar-card input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+}
+
+/* =====================================================
+   CHECKLIST DOS PILARES
+===================================================== */
+
+.pillar-card ul {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.pillar-card li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #475569;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.pillar-card li::before {
+  content: "✓";
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+/* ===========================
+   PRÉVIA DO DIAGNÓSTICO
+=========================== */
+
+.nv-preview {
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px;
+  border: 1px solid #e6ecf5;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.preview-score {
+  text-align: center;
+}
+
+.preview-score span {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.preview-score strong {
+  font-size: 34px;
+  color: #2563eb;
+}
+
+.preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.preview-item span {
+  color: #64748b;
+}
+
+.preview-item strong {
+  color: #0f172a;
+}
+
+.preview-body hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px 0;
+}
+
+.preview-body p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.preview-body ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #475569;
+}
+
+.preview-body li {
+  margin-bottom: 8px;
+}
+
+/* ===========================
+   BOTÕES
+=========================== */
+
+.nv-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.primary,
+.secondary {
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+}
+
+.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.secondary {
+  background: #eef2ff;
+  color: #2563eb;
+}
+
+.secondary:hover {
+  background: #dbeafe;
+}
+
+/* ===========================
+   RESPONSIVO
+=========================== */
+
+@media (max-width: 1100px) {
+  .nv-fields {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pillar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .nova-visita {
+    padding: 20px;
+  }
+
+  .nv-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+  }
+
+  .nv-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .pillar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .preview-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .nv-actions {
+    flex-direction: column-reverse;
+  }
+
+  .primary,
+  .secondary {
+    width: 100%;
+  }
+}
