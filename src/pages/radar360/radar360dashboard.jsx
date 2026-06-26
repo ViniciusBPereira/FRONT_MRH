@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./radar360dashboard.css";
 import { api } from "../../services/api";
-import NovaVisita from "./NovaVisita";
+import NovaVisita from "./novavisita.jsx";
 
 export default function Radar360Dashboard() {
   const [loading, setLoading] = useState(true);
