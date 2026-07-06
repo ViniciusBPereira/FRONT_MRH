@@ -1,0 +1,670 @@
+/* =====================================================
+   PLANO DE AÇÃO
+===================================================== */
+
+.action-page {
+  padding: 24px;
+  background: #f3f6fb;
+}
+
+.action-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e6ebf2;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 28px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.action-header h2 {
+  margin: 4px 0;
+  font-size: 30px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.action-header p {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.action-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+/* =====================================================
+   FORMULÁRIO
+===================================================== */
+
+.action-form-horizontal {
+  padding: 24px 28px;
+  display: grid;
+
+  grid-template-columns:
+    180px
+    minmax(420px, 1fr)
+    160px
+    140px
+    130px
+    120px;
+
+  gap: 16px;
+  align-items: stretch;
+}
+
+.action-form-horizontal > * {
+  height: 46px;
+}
+
+.action-form-horizontal input,
+.action-form-horizontal select,
+.action-form-horizontal button {
+  margin: 0;
+}
+
+.action-form-horizontal input,
+.action-form-horizontal select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #d7dee7;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 14px;
+  background: #fff;
+  transition: 0.2s;
+  box-sizing: border-box;
+}
+
+.action-form-horizontal input:focus,
+.action-form-horizontal select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* =====================================================
+   ÁREA DOS TEXTOS
+===================================================== */
+
+.action-textareas {
+  padding: 0 28px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.action-textareas textarea {
+  width: 100%;
+  min-height: 78px;
+  resize: vertical;
+  border: 1px solid #d7dee7;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #334155;
+  background: #fff;
+  transition: 0.2s;
+  box-sizing: border-box;
+}
+
+.action-textareas textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* =====================================================
+   PROGRESSO
+===================================================== */
+
+.plan-progress {
+  margin: 0 28px 24px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-header span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.progress-header strong {
+  color: #2563eb;
+  font-size: 18px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  transition: 0.35s;
+}
+
+/* =====================================================
+   BOTÕES
+===================================================== */
+
+.primary,
+.secondary,
+.danger {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.primary {
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+
+  background: #2563eb;
+  color: white;
+
+  border: none;
+  border-radius: 8px;
+}
+
+.primary:hover {
+  background: #1d4ed8;
+}
+
+.secondary {
+  background: #eef4ff;
+  color: #2563eb;
+  padding: 9px 16px;
+}
+
+.secondary:hover {
+  background: #dbeafe;
+}
+
+.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 9px 16px;
+}
+
+.danger:hover {
+  background: #fecaca;
+}
+
+.small {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+/* =====================================================
+   TABELA
+===================================================== */
+
+.action-table {
+  margin-top: 10px;
+  border-top: 1px solid #edf2f7;
+  overflow-x: auto;
+  background: #fff;
+}
+
+.action-table table {
+  width: 100%;
+  min-width: 1350px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* =====================================================
+   CABEÇALHO
+===================================================== */
+
+.action-table thead tr {
+  background: #f8fafc;
+}
+
+.action-table th {
+  padding: 15px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.action-table th:first-child {
+  padding-left: 28px;
+}
+
+.action-table th:last-child {
+  text-align: center;
+}
+
+/* =====================================================
+   LINHAS
+===================================================== */
+
+.action-table tbody tr {
+  transition: 0.2s;
+}
+
+.action-table tbody tr:nth-child(even) {
+  background: #fbfcfe;
+}
+
+.action-table tbody tr:hover {
+  background: #eef6ff;
+}
+
+.action-table td {
+  padding: 18px;
+  border-bottom: 1px solid #edf2f7;
+  color: #334155;
+  font-size: 14px;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.action-table td:first-child {
+  padding-left: 28px;
+}
+
+/* =====================================================
+   LARGURA DAS COLUNAS
+===================================================== */
+.action-table td:nth-child(1) {
+  min-width: 220px;
+}
+
+.action-table td:nth-child(2) {
+  min-width: 250px;
+  font-weight: 600;
+}
+
+.action-table td:nth-child(3) {
+  min-width: 260px;
+}
+
+.action-table td:nth-child(4) {
+  min-width: 260px;
+}
+
+.action-table td:nth-child(5) {
+  min-width: 150px;
+}
+
+.action-table td:nth-child(6) {
+  min-width: 120px;
+  text-align: center;
+}
+
+.action-table td:nth-child(7) {
+  min-width: 130px;
+  text-align: center;
+}
+
+.action-table td:nth-child(8) {
+  min-width: 130px;
+  text-align: center;
+}
+
+.action-table td:nth-child(9) {
+  min-width: 190px;
+  text-align: center;
+}
+/* =====================================================
+   BADGES STATUS
+===================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge.todo {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.badge.doing {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.badge.done {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+/* =====================================================
+   SINALEIRA
+===================================================== */
+
+.signal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.signal.green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.signal.yellow {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.signal.red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* =====================================================
+   BOTÕES
+===================================================== */
+
+.table-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.table-actions button {
+  width: 90px;
+  min-width: 90px;
+}
+
+.action-table td:last-child,
+.action-table th:last-child {
+  width: 190px;
+  min-width: 190px;
+  text-align: center;
+}
+
+/* =====================================================
+   TABELA VAZIA
+===================================================== */
+
+.empty-table {
+  padding: 70px !important;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+/* =====================================================
+   SCROLL
+===================================================== */
+
+.action-table::-webkit-scrollbar {
+  height: 10px;
+}
+
+.action-table::-webkit-scrollbar-track {
+  background: #eef2f7;
+}
+
+.action-table::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.action-table::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+/* =====================================================
+   AJUSTES FINAIS
+===================================================== */
+
+.action-card * {
+  box-sizing: border-box;
+}
+
+.action-form-horizontal button {
+  width: 100%;
+}
+
+.action-form-horizontal input::placeholder,
+.action-textareas textarea::placeholder {
+  color: #94a3b8;
+}
+
+.action-textareas textarea:hover,
+.action-form-horizontal input:hover,
+.action-form-horizontal select:hover {
+  border-color: #93c5fd;
+}
+
+.action-table td {
+  word-break: break-word;
+}
+
+.action-table td strong {
+  color: #0f172a;
+}
+
+.action-table td small {
+  color: #64748b;
+}
+
+.action-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* =====================================================
+   ANIMAÇÕES
+===================================================== */
+
+.action-card {
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.primary,
+.secondary,
+.danger,
+.badge,
+.signal {
+  transition: all 0.2s ease;
+}
+
+.primary:active,
+.secondary:active,
+.danger:active {
+  transform: scale(0.98);
+}
+
+/* =====================================================
+   RESPONSIVO
+===================================================== */
+
+@media (max-width: 1600px) {
+  .action-form-horizontal {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .action-page {
+    padding: 20px;
+  }
+
+  .action-header {
+    padding: 22px;
+  }
+
+  .action-form-horizontal {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+
+    padding: 22px;
+  }
+
+  .action-textareas {
+    grid-template-columns: 1fr;
+
+    padding: 0 22px 20px;
+  }
+
+  .plan-progress {
+    margin: 0 22px 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .action-page {
+    padding: 14px;
+  }
+
+  .action-card {
+    border-radius: 12px;
+  }
+
+  .action-header {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 12px;
+
+    padding: 18px;
+  }
+
+  .action-header h2 {
+    font-size: 24px;
+  }
+
+  .action-header p {
+    font-size: 13px;
+  }
+
+  .action-form-horizontal {
+    grid-template-columns: 1fr;
+
+    padding: 18px;
+  }
+
+  .action-textareas {
+    padding: 0 18px 18px;
+
+    grid-template-columns: 1fr;
+  }
+
+  .plan-progress {
+    margin: 0 18px 18px;
+
+    padding: 14px;
+  }
+
+  .primary {
+    width: 100%;
+  }
+
+  .action-table table {
+    min-width: 1100px;
+  }
+
+  .table-actions {
+    flex-direction: column;
+
+    width: 100%;
+  }
+
+  .table-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .action-header h2 {
+    font-size: 20px;
+  }
+
+  .action-header p {
+    display: none;
+  }
+
+  .action-form-horizontal {
+    gap: 12px;
+  }
+
+  .action-textareas textarea {
+    min-height: 70px;
+  }
+
+  .progress-header {
+    font-size: 12px;
+  }
+
+  .badge,
+  .signal {
+    font-size: 11px;
+
+    padding: 5px 10px;
+  }
+}

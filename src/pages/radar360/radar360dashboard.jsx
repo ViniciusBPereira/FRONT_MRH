@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./radar360dashboard.css";
 import { api } from "../../services/api";
 import NovaVisita from "./novavisita.jsx";
+import Acompanhamento from "./acompanhamento.jsx";
+import PlanodeAcao from "./planodeacao.jsx";
 
 export default function Radar360Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -308,13 +310,6 @@ export default function Radar360Dashboard() {
         >
           Plano de Ação
         </button>
-
-        <button
-          className={aba === "contracts" ? "active" : ""}
-          onClick={() => setAba("contracts")}
-        >
-          Contratos
-        </button>
       </div>
       {aba === "dashboard" && (
         <>
@@ -426,6 +421,25 @@ export default function Radar360Dashboard() {
         </>
       )}
       {aba === "visit" && <NovaVisita />}
+      {aba === "tracking" && (
+        <Acompanhamento
+          visits={filteredVisits}
+          tracking={filteredTracking}
+          actions={filteredActions}
+          bpSelecionado={bpSelecionado}
+          contratoSelecionado={contratoSelecionado}
+          onReload={carregar}
+        />
+      )}
+
+      {aba === "actions" && (
+        <PlanodeAcao
+          visits={filteredVisits}
+          actions={filteredActions}
+          contratoSelecionado={contratoSelecionado}
+          onReload={carregar}
+        />
+      )}
     </div>
   );
 }

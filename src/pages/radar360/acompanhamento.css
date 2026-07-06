@@ -1,0 +1,784 @@
+/* =====================================================
+   TRACKING - ESTRUTURA GERAL
+===================================================== */
+
+.tracking-page {
+  padding: 32px;
+  background: #f4f7fb;
+  min-height: 100vh;
+}
+
+.tracking-grid {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+/* =====================================================
+   CARDS
+===================================================== */
+
+.tracking-card,
+.tracking-table-card,
+.tracking-history {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  padding: 28px;
+}
+
+.tracking-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.tracking-card-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #1f2937;
+}
+
+.tracking-card-header small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+/* =====================================================
+   FORMULÁRIO
+===================================================== */
+
+.tracking-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.tracking-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.tracking-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.tracking-fields .full {
+  grid-column: 1/-1;
+}
+/* =====================================================
+   TRACKING - INPUTS
+===================================================== */
+
+.tracking-fields input,
+.tracking-fields select,
+.tracking-fields textarea,
+.chart-filter select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  color: #1f2937;
+  box-sizing: border-box;
+  transition: 0.25s;
+}
+
+.tracking-fields input:hover,
+.tracking-fields select:hover,
+.tracking-fields textarea:hover,
+.chart-filter select:hover {
+  border-color: #93c5fd;
+}
+
+.tracking-fields input:focus,
+.tracking-fields select:focus,
+.tracking-fields textarea:focus,
+.chart-filter select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.tracking-fields textarea {
+  resize: vertical;
+  min-height: 130px;
+}
+
+.tracking-fields input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.tracking-fields input[type="number"]::-webkit-inner-spin-button,
+.tracking-fields input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* =====================================================
+   BOTÕES
+===================================================== */
+
+.tracking-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.primary,
+.secondary,
+.danger {
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+}
+
+.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+}
+
+.secondary {
+  background: #eef2ff;
+  color: #2563eb;
+}
+
+.secondary:hover {
+  background: #dbeafe;
+}
+
+.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.danger:hover {
+  background: #fecaca;
+}
+
+.small {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* =====================================================
+   FILTRO DO GRÁFICO
+===================================================== */
+
+.chart-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chart-filter label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* =====================================================
+   CARD DO GRÁFICO
+===================================================== */
+
+.tracking-chart-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 620px;
+}
+
+.tracking-chart {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px dashed #dbe5f1;
+  border-radius: 16px;
+  background: #fbfdff;
+  padding: 24px;
+  min-height: 420px;
+}
+
+.chart-empty {
+  color: #94a3b8;
+  font-size: 15px;
+  text-align: center;
+}
+/* =====================================================
+   TRACKING - EVOLUÇÃO DO CONTRATO
+===================================================== */
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.chart-legend span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.chart-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* cores */
+
+.legend-turnover {
+  background: #2563eb;
+}
+
+.legend-absenteeism {
+  background: #10b981;
+}
+
+.legend-he {
+  background: #f59e0b;
+}
+
+.legend-labor {
+  background: #ef4444;
+}
+
+.legend-replacement {
+  background: #8b5cf6;
+}
+
+/* =====================================================
+   TIMELINE DOS MESES
+===================================================== */
+
+.chart-placeholder {
+  width: 100%;
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.chart-placeholder::-webkit-scrollbar {
+  height: 10px;
+}
+
+.chart-placeholder::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.chart-month {
+  min-width: 260px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px;
+  transition: 0.25s;
+  flex-shrink: 0;
+}
+
+.chart-month:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+/* =====================================================
+   CABEÇALHO DO MÊS
+===================================================== */
+
+.chart-month-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.chart-month-header strong {
+  font-size: 18px;
+  color: #1e3a8a;
+}
+
+/* =====================================================
+   INDICADORES
+===================================================== */
+
+.chart-values {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chart-values div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.chart-values span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chart-values strong {
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* =====================================================
+   ESTADO VAZIO
+===================================================== */
+
+.chart-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 280px;
+  width: 100%;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 15px;
+}
+/* =====================================================
+   TRACKING - TABELA
+===================================================== */
+
+.tracking-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tracking-table::-webkit-scrollbar {
+  height: 10px;
+}
+
+.tracking-table::-webkit-scrollbar-track {
+  background: #edf2f7;
+  border-radius: 999px;
+}
+
+.tracking-table::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.tracking-table::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* =====================================================
+   TABLE
+===================================================== */
+
+.tracking-table table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+}
+
+/* =====================================================
+   CABEÇALHO
+===================================================== */
+
+.tracking-table thead tr {
+  background: #eff6ff;
+}
+
+.tracking-table th {
+  padding: 16px;
+  text-align: center;
+  white-space: nowrap;
+
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  color: #1d4ed8;
+
+  border-bottom: 1px solid #dbeafe;
+}
+
+.tracking-table th:first-child,
+.tracking-table td:first-child {
+  text-align: left;
+}
+
+/* =====================================================
+   LINHAS
+===================================================== */
+
+.tracking-table tbody tr {
+  transition: 0.25s;
+}
+
+.tracking-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.tracking-table td {
+  padding: 16px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: center;
+  white-space: nowrap;
+
+  font-size: 14px;
+  color: #374151;
+}
+
+/* =====================================================
+   OBSERVAÇÕES
+===================================================== */
+
+.notes-column {
+  white-space: normal !important;
+  max-width: 320px;
+  line-height: 1.5;
+  text-align: left !important;
+}
+
+/* =====================================================
+   TABELA VAZIA
+===================================================== */
+
+.empty-table {
+  padding: 60px 20px !important;
+  text-align: center !important;
+
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+/* =====================================================
+   BOTÕES DA TABELA
+===================================================== */
+
+.table-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-actions button {
+  min-width: 82px;
+}
+
+/* =====================================================
+   CARD DA TABELA
+===================================================== */
+
+.tracking-table-card {
+  margin-top: 24px;
+}
+
+.tracking-table-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  transition: 0.25s;
+}
+/* =====================================================
+   TRACKING - HISTÓRICO DE VISITAS
+===================================================== */
+
+.tracking-history {
+  margin-top: 24px;
+}
+
+.history-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 220px;
+
+  border: 2px dashed #dbe5f1;
+  border-radius: 16px;
+
+  color: #94a3b8;
+  background: #fbfdff;
+  text-align: center;
+}
+
+/* =====================================================
+   CARD DA VISITA
+===================================================== */
+
+.history-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 22px;
+  margin-top: 18px;
+
+  transition: 0.25s;
+}
+
+.history-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.history-header h4 {
+  margin: 0;
+  font-size: 19px;
+  color: #1f2937;
+}
+
+.history-header span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.history-date {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.history-grid div,
+.history-scores div {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.history-grid span,
+.history-scores span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.history-grid strong,
+.history-scores strong {
+  color: #1f2937;
+  font-size: 16px;
+}
+
+/* =====================================================
+   SCORES
+===================================================== */
+
+.history-scores {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* =====================================================
+   OVERVIEW
+===================================================== */
+
+.history-overview {
+  background: #f8fbff;
+  border-left: 4px solid #2563eb;
+  padding: 18px;
+  border-radius: 12px;
+}
+
+.history-overview h5 {
+  margin: 0 0 10px;
+  color: #1e3a8a;
+  font-size: 15px;
+}
+
+.history-overview p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+/* =====================================================
+   RODAPÉ
+===================================================== */
+
+.tracking-footer {
+  margin-top: 26px;
+
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tracking-summary {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+
+  padding: 18px 22px;
+
+  min-width: 220px;
+}
+
+.tracking-summary span {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.tracking-summary strong {
+  font-size: 22px;
+  color: #1f2937;
+}
+
+/* =====================================================
+   RESPONSIVO
+===================================================== */
+
+@media (max-width: 1200px) {
+  .tracking-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .history-scores {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .tracking-page {
+    padding: 18px;
+  }
+
+  .tracking-card,
+  .tracking-table-card,
+  .tracking-history {
+    padding: 20px;
+  }
+
+  .tracking-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tracking-actions {
+    flex-direction: column-reverse;
+  }
+
+  .primary,
+  .secondary {
+    width: 100%;
+  }
+
+  .history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-scores {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tracking-footer {
+    flex-direction: column;
+  }
+
+  .tracking-summary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-scores {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-card-header h2 {
+    font-size: 20px;
+  }
+
+  .history-header h4 {
+    font-size: 17px;
+  }
+}
