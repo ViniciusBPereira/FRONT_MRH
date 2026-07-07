@@ -196,11 +196,26 @@
 }
 
 .pillar-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   transition: 0.25s;
+}
+
+.pillar-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.pillar-card h4 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+  font-weight: 700;
 }
 
 .pillar-card:hover {
@@ -208,31 +223,9 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
 }
 
-.pillar-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 18px;
-}
-
-.pillar-score {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  color: #2563eb;
-  margin: 12px 0 18px;
-}
-
 /* =====================================================
    RANGE
 ===================================================== */
-
-.pillar-card input[type="range"] {
-  width: 100%;
-  cursor: pointer;
-  appearance: none;
-  background: transparent;
-}
 
 .pillar-card input[type="range"]::-webkit-slider-runnable-track {
   height: 8px;
@@ -273,22 +266,6 @@
 /* =====================================================
    CHECKLIST DOS PILARES
 ===================================================== */
-
-.pillar-card ul {
-  list-style: none;
-  margin: 18px 0 0;
-  padding: 0;
-}
-
-.pillar-card li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #475569;
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
 
 .pillar-card li::before {
   content: "✓";
@@ -493,4 +470,76 @@
   .secondary {
     width: 100%;
   }
+}
+
+.pillar-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.pillar-card select {
+  width: 100%;
+  border: 1px solid #d6dce7;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: white;
+  transition: 0.2s;
+}
+
+.pillar-card select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.pillar-total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f7;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pillar-total strong {
+  font-size: 22px;
+  color: #2563eb;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status.referência {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status.estável {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status.alerta {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status.crítico {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.priority {
+  color: #2563eb;
+  font-weight: 700;
 }
