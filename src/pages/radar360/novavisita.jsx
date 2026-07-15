@@ -6,6 +6,14 @@ export default function NovaVisita() {
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   });
+
+  const ROOT_CAUSES = [
+  "liderança",
+  "clima",
+  "estrutura",
+  "cliente",
+  "indicadores",
+];
   const OPTIONS = [
     { label: "Não atende", value: 0 },
     { label: "Atende parcialmente", value: 40 },
@@ -15,7 +23,8 @@ export default function NovaVisita() {
   const initialState = {
     // Dados da visita
     visit_date: "",
-    contract: "",
+    pec: "",
+cr: "",
     client: "",
     unit: "",
     bp: "",
@@ -31,9 +40,6 @@ export default function NovaVisita() {
     replacement_days: "",
     labor_actions: 0,
     warnings: 0,
-    complaints: 0,
-
-    pulse: 75,
     enps: 30,
 
     // Liderança
@@ -61,7 +67,7 @@ export default function NovaVisita() {
     customer_requests: 0,
 
     // Qualitativo
-    root_cause: "liderança",
+    root_cause: [],
     evidence: "",
     overview: "",
 
@@ -72,13 +78,13 @@ export default function NovaVisita() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = ({ target }) => {
-    const { name, value } = target;
+  const { name, value } = target;
 
-    setForm((old) => ({
-      ...old,
-      [name]: isNaN(value) ? value : Number(value),
-    }));
-  };
+  setForm((old) => ({
+    ...old,
+    [name]: isNaN(value) ? value : Number(value),
+  }));
+};
 
   const average = (...values) => {
     console.log("Average:", values);
@@ -303,15 +309,25 @@ export default function NovaVisita() {
             </label>
 
             <label>
-              Contrato
-              <input
-                type="text"
-                required
-                name="contract"
-                value={form.contract}
-                onChange={handleChange}
-              />
-            </label>
+  PEC
+  <input
+    type="text"
+    required
+    name="pec"
+    value={form.pec}
+    onChange={handleChange}
+  />
+</label>
+<label>
+  CR
+  <input
+    type="text"
+    required
+    name="cr"
+    value={form.cr}
+    onChange={handleChange}
+  />
+</label>
 
             <label>
               Cliente
@@ -476,30 +492,6 @@ export default function NovaVisita() {
                 required
                 name="warnings"
                 value={form.warnings}
-                onChange={handleChange}
-              />
-            </label>
-
-            <label>
-              Reclamações
-              <input
-                type="number"
-                min="0"
-                name="complaints"
-                value={form.complaints}
-                onChange={handleChange}
-              />
-            </label>
-
-            <label>
-              Pulse Survey
-              <input
-                type="number"
-                min="0"
-                max="100"
-                required
-                name="pulse"
-                value={form.pulse}
                 onChange={handleChange}
               />
             </label>
@@ -826,24 +818,37 @@ export default function NovaVisita() {
           <h3>Análise Qualitativa</h3>
 
           <div className="nv-fields">
-            <label>
-              Causa Raiz
-              <select
-                name="root_cause"
-                value={form.root_cause}
-                onChange={handleChange}
-              >
-                <option value="liderança">Liderança</option>
+            <label className="full">
+  Causa Raiz
 
-                <option value="clima">Clima</option>
+  <div className="root-cause-grid">
+    {ROOT_CAUSES.map((cause) => (
+      <label key={cause} className="root-cause-item">
+        <input
+          type="checkbox"
+          checked={form.root_cause.includes(cause)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setForm((old) => ({
+                ...old,
+                root_cause: [...old.root_cause, cause],
+              }));
+            } else {
+              setForm((old) => ({
+                ...old,
+                root_cause: old.root_cause.filter((item) => item !== cause),
+              }));
+            }
+          }}
+        />
 
-                <option value="estrutura">Estrutura</option>
-
-                <option value="cliente">Cliente</option>
-
-                <option value="indicadores">Indicadores</option>
-              </select>
-            </label>
+        <span>
+          {cause.charAt(0).toUpperCase() + cause.slice(1)}
+        </span>
+      </label>
+    ))}
+  </div>
+</label>
 
             <label className="full">
               Evidências
@@ -930,10 +935,6 @@ export default function NovaVisita() {
 
             <hr />
 
-            <div className="preview-item">
-              <span>Pulse Survey</span>
-              <strong>{form.pulse}%</strong>
-            </div>
 
             <div className="preview-item">
               <span>eNPS</span>

@@ -5,6 +5,7 @@ import { api } from "../../services/api";
 import NovaVisita from "./novavisita.jsx";
 import Acompanhamento from "./acompanhamento.jsx";
 import PlanodeAcao from "./planodeacao.jsx";
+import AcaoPontual from "./acaopontual.jsx";
 
 export default function Radar360Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -62,22 +63,23 @@ export default function Radar360Dashboard() {
   }, [visits]);
 
   const contratos = useMemo(() => {
-    const lista = bpSelecionado
-      ? visits.filter((v) => v.bp === bpSelecionado)
-      : visits;
+  const lista = bpSelecionado
+    ? visits.filter((v) => v.bp === bpSelecionado)
+    : visits;
 
-    return [...new Set(lista.map((v) => v.contract).filter(Boolean))].sort();
-  }, [visits, bpSelecionado]);
+  return [...new Set(lista.map((v) => v.cr).filter(Boolean))].sort();
+}, [visits, bpSelecionado]);
 
   const filteredVisits = useMemo(() => {
-    return visits.filter((v) => {
-      const bpOk = !bpSelecionado || v.bp === bpSelecionado;
-      const contratoOk =
-        !contratoSelecionado || v.contract === contratoSelecionado;
+  return visits.filter((v) => {
+    const bpOk = !bpSelecionado || v.bp === bpSelecionado;
 
-      return bpOk && contratoOk;
-    });
-  }, [visits, bpSelecionado, contratoSelecionado]);
+    const crOk =
+      !contratoSelecionado || v.cr === contratoSelecionado;
+
+    return bpOk && crOk;
+  });
+}, [visits, bpSelecionado, contratoSelecionado]);
 
   // Contratos pertencentes ao BP filtrado
   const contratosDoBP = useMemo(() => {
@@ -85,15 +87,15 @@ export default function Radar360Dashboard() {
       ? visits.filter((v) => v.bp === bpSelecionado)
       : visits;
 
-    return [...new Set(lista.map((v) => v.contract).filter(Boolean))];
+    return [...new Set(lista.map((v) => v.cr).filter(Boolean))];
   }, [visits, bpSelecionado]);
 
   const filteredActions = useMemo(() => {
     return actions.filter((a) => {
-      const bpOk = !bpSelecionado || contratosDoBP.includes(a.contract);
+      const bpOk = !bpSelecionado || contratosDoBP.includes(a.cr);
 
-      const contratoOk =
-        !contratoSelecionado || a.contract === contratoSelecionado;
+const contratoOk =
+  !contratoSelecionado || a.cr === contratoSelecionado;
 
       return bpOk && contratoOk;
     });
@@ -101,10 +103,10 @@ export default function Radar360Dashboard() {
 
   const filteredTracking = useMemo(() => {
     return tracking.filter((t) => {
-      const bpOk = !bpSelecionado || contratosDoBP.includes(t.contract);
+      const bpOk = !bpSelecionado || contratosDoBP.includes(t.cr);
 
-      const contratoOk =
-        !contratoSelecionado || t.contract === contratoSelecionado;
+const contratoOk =
+  !contratoSelecionado || t.cr === contratoSelecionado;
 
       return bpOk && contratoOk;
     });
@@ -187,7 +189,7 @@ export default function Radar360Dashboard() {
     filteredVisits.forEach((v) =>
       eventos.push({
         tipo: "Visita",
-        contrato: v.contract,
+        contrato: v.cr,
         data: v.visit_date,
       }),
     );
@@ -195,7 +197,7 @@ export default function Radar360Dashboard() {
     filteredActions.forEach((a) =>
       eventos.push({
         tipo: "Ação",
-        contrato: a.contract,
+        contrato: a.cr,
         data: a.due_date,
         etapa: a.stage,
       }),
@@ -272,7 +274,7 @@ export default function Radar360Dashboard() {
             value={contratoSelecionado}
             onChange={(e) => setContratoSelecionado(e.target.value)}
           >
-            <option value="">Todos os Contratos</option>
+            <option value="">Todos os CRs</option>
 
             {contratos.map((contrato) => (
               <option key={contrato} value={contrato}>
@@ -310,6 +312,12 @@ export default function Radar360Dashboard() {
         >
           Plano de Ação
         </button>
+        <button
+  className={aba === "acaopontual" ? "active" : ""}
+  onClick={() => setAba("acaopontual")}
+>
+  Ação Pontual
+</button>
       </div>
       {aba === "dashboard" && (
         <>
@@ -356,7 +364,7 @@ export default function Radar360Dashboard() {
                     className="priority"
                     style={{ marginBottom: 12 }}
                   >
-                    <strong>{acao.contract}</strong>
+                    <strong>{acao.cr}</strong>
 
                     <br />
 
@@ -399,7 +407,7 @@ export default function Radar360Dashboard() {
 
                     <br />
 
-                    <small>Contrato: {evento.contrato}</small>
+                    <small>CR: {evento.contrato}</small>
 
                     <br />
 
@@ -440,6 +448,14 @@ export default function Radar360Dashboard() {
           onReload={carregar}
         />
       )}
+      {aba === "acaopontual" && (
+  <AcaoPontual
+    visits={filteredVisits}
+    contratoSelecionado={contratoSelecionado}
+    onReload={carregar}
+  />
+)}
+
     </div>
   );
 }

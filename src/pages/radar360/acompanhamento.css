@@ -782,3 +782,110 @@
     font-size: 17px;
   }
 }
+.tracking-table-simple {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  font-size: 14px;
+}
+
+/* CABEÇALHO */
+.tracking-table-simple thead {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+}
+
+.tracking-table-simple th {
+  padding: 14px 16px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: #ffffff !important;
+}
+
+.tracking-table-simple td {
+  padding: 14px 16px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+
+/* LINHAS */
+.tracking-table-simple tbody tr {
+  transition: 0.2s ease;
+}
+
+.tracking-table-simple tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.tracking-table-simple tbody tr:hover {
+  background: #eff6ff;
+}
+
+.tracking-table-simple tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* ÁREA DOS BOTÕES */
+.tracking-table-simple td:last-child {
+  white-space: nowrap;
+  width: 140px;
+}
+
+
+/* BOTÕES */
+.tracking-table-simple td:last-child button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+
+  width: auto !important;
+  min-width: 55px;
+
+  height: 28px;
+
+  padding: 4px 10px !important;
+  margin: 2px;
+
+  border: none;
+  border-radius: 6px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+
+/* EDITAR */
+.tracking-table-simple td:last-child button:first-of-type {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.tracking-table-simple td:last-child button:first-of-type:hover {
+  background: #2563eb;
+  color: white;
+  transform: translateY(-1px);
+}
+
+
+/* EXCLUIR */
+.tracking-table-simple td:last-child button:last-of-type {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tracking-table-simple td:last-child button:last-of-type:hover {
+  background: #dc2626;
+  color: white;
+  transform: translateY(-1px);
+}

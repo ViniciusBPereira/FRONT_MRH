@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import "./acompanhamento.css";
 import {
@@ -12,7 +12,7 @@ import {
   Legend,
 } from "recharts";
 
-export default function Tracking({ visits, tracking, contratoSelecionado }) {
+export default function Tracking({ visits, tracking, contratoSelecionado,onReload }) {
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   });
@@ -22,7 +22,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
   ============================================ */
 
   const initialState = {
-    contract: "",
+    cr: "",
     month: "",
 
     turnover: "",
@@ -43,14 +43,19 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
   ============================================ */
   const [graficoSelecionado, setGraficoSelecionado] = useState("todos");
   const [form, setForm] = useState(initialState);
-  const contracts = useMemo(() => {
-    return [...new Set(visits.map((v) => v.contract))].sort();
-  }, [visits]);
 
   const [loading, setLoading] = useState(false);
 
   const [editingId, setEditingId] = useState(null);
 
+  useEffect(() => {
+  if (contratoSelecionado) {
+    setForm((old) => ({
+      ...old,
+      cr: contratoSelecionado,
+    }));
+  }
+}, [contratoSelecionado]);
   /* ============================================
       ALTERAÇÃO DOS CAMPOS
   ============================================ */
@@ -69,9 +74,13 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
   ============================================ */
 
   const clearForm = () => {
-    setEditingId(null);
-    setForm(initialState);
-  };
+  setEditingId(null);
+
+  setForm({
+    ...initialState,
+    cr: contratoSelecionado || "",
+  });
+};
   /* ============================================
       SALVAR
   ============================================ */
@@ -93,7 +102,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
       }
 
       clearForm();
-
+await onReload();
       alert(
         editingId
           ? "Acompanhamento atualizado com sucesso."
@@ -116,7 +125,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
     setEditingId(item.id);
 
     setForm({
-      contract: item.contract,
+      cr: item.cr,
       month: item.month,
 
       turnover: item.turnover,
@@ -149,6 +158,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
       await api.delete(`/tracking/${id}`, {
         headers: authHeader(),
       });
+      await onReload();
     } catch (err) {
       console.error(err);
 
@@ -160,7 +170,14 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
       FILTROS
   ============================================ */
 
-  const filteredTracking = tracking;
+  const filteredTracking = useMemo(() => {
+  if (!contratoSelecionado) return [];
+
+  return tracking.filter(
+    (item) => item.cr === contratoSelecionado
+  );
+
+}, [tracking, contratoSelecionado]);
 
   /* ============================================
       EVOLUÇÃO DO CONTRATO
@@ -170,7 +187,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
     if (!contratoSelecionado) return [];
 
     return filteredTracking
-      .filter((item) => item.contract === contratoSelecionado)
+      .filter((item) => item.cr === contratoSelecionado)
       .sort((a, b) => a.month.localeCompare(b.month));
   }, [filteredTracking, contratoSelecionado]);
 
@@ -198,23 +215,6 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
           </div>
 
           <div className="tracking-fields">
-            <label>
-              Contrato
-              <select
-                required
-                name="contract"
-                value={form.contract}
-                onChange={handleChange}
-              >
-                <option value="">Selecione...</option>
-
-                {contracts.map((contract) => (
-                  <option key={contract} value={contract}>
-                    {contract}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             <label>
               Mês de Referência
@@ -466,104 +466,114 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
         </div>
       </div>
       {/* ==========================================================
-          HISTÓRICO DE ACOMPANHAMENTOS
-      =========================================================== */}
-      <div className="tracking-table-card">
-        <div className="tracking-card-header">
-          <div>
-            <h2>Histórico de Acompanhamentos</h2>
+    HISTÓRICO DE ACOMPANHAMENTOS
+=========================================================== */}
+<div className="tracking-table-card">
 
-            <small>Evolução mensal registrada para cada contrato.</small>
-          </div>
-        </div>
+  <div className="tracking-card-header">
+    <div>
+      <h2>Histórico de Acompanhamentos</h2>
+      <small>Evolução mensal registrada para cada contrato.</small>
+    </div>
+  </div>
 
-        <div className="tracking-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Mês</th>
 
-                <th>Contrato</th>
+  <div>
+    Total registros: {filteredTracking.length}
+  </div>
 
-                <th>Turnover</th>
 
-                <th>Absenteísmo</th>
+  <table className="tracking-table-simple">
 
-                <th>H.E.</th>
+    <thead>
+      <tr>
+        <th>Mês</th>
+        <th>CR</th>
+        <th>Turnover</th>
+        <th>Absenteísmo</th>
+        <th>H.E.</th>
+        <th>Trabalhistas</th>
+        <th>Fechamento</th>
+        <th>Efetivo</th>
+        <th>Observações</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
 
-                <th>Trabalhistas</th>
 
-                <th>Fechamento</th>
+    <tbody>
 
-                <th>Efetivo</th>
+      {filteredTracking.length === 0 ? (
 
-                <th>Observações</th>
+        <tr>
+          <td colSpan="10">
+            Nenhum acompanhamento encontrado.
+          </td>
+        </tr>
 
-                <th>Ações</th>
-              </tr>
-            </thead>
+      ) : (
 
-            <tbody>
-              {filteredTracking.length === 0 ? (
-                <tr>
-                  <td colSpan="10" className="empty-table">
-                    Nenhum acompanhamento encontrado.
-                  </td>
-                </tr>
-              ) : (
-                filteredTracking
-                  .sort((a, b) => new Date(b.month) - new Date(a.month))
-                  .map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.month}</td>
+        filteredTracking.map((item) => (
 
-                      <td>{item.contract}</td>
+          <tr key={item.id}>
 
-                      <td>{Number(item.turnover).toFixed(1)}%</td>
+            <td>{item.month}</td>
 
-                      <td>{Number(item.absenteeism).toFixed(1)}%</td>
+            <td>{item.cr}</td>
 
-                      <td>
-                        R${" "}
-                        {Number(item.he_inefficiency).toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
+            <td>{Number(item.turnover).toFixed(1)}%</td>
 
-                      <td>{item.labor_actions}</td>
+            <td>{Number(item.absenteeism).toFixed(1)}%</td>
 
-                      <td>{item.replacement_days} dias</td>
+            <td>
+              R$ {Number(item.he_inefficiency).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2
+              })}
+            </td>
 
-                      <td>{item.headcount}</td>
+            <td>{item.labor_actions}</td>
 
-                      <td className="notes-column">{item.notes || "-"}</td>
+            <td>{item.replacement_days} dias</td>
 
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="secondary small"
-                            onClick={() => handleEdit(item)}
-                          >
-                            Editar
-                          </button>
+            <td>{item.headcount}</td>
 
-                          <button
-                            type="button"
-                            className="danger small"
-                            onClick={() => handleDelete(item.id)}
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <td>
+              {item.notes || "-"}
+            </td>
+
+
+            <td>
+
+              <button
+                type="button"
+                onClick={() => handleEdit(item)}
+              >
+                Editar
+              </button>
+
+
+              <button
+                type="button"
+                onClick={() => handleDelete(item.id)}
+              >
+                Excluir
+              </button>
+
+            </td>
+
+
+          </tr>
+
+        ))
+
+      )}
+
+    </tbody>
+
+
+  </table>
+
+</div>
       {/* ==========================================================
           HISTÓRICO DAS VISITAS
       =========================================================== */}
@@ -581,7 +591,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
           </div>
         ) : (
           visits
-            .filter((visit) => visit.contract === contratoSelecionado)
+            .filter((visit) => visit.cr === contratoSelecionado)
             .sort(
               (a, b) =>
                 new Date(b.visit_date).getTime() -
@@ -593,7 +603,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
                   <div>
                     <h4>{visit.client}</h4>
 
-                    <span>Contrato {visit.contract}</span>
+                    <span>CR {visit.cr}</span>
                   </div>
 
                   <div className="history-date">
@@ -680,7 +690,7 @@ export default function Tracking({ visits, tracking, contratoSelecionado }) {
 
         {contratoSelecionado && (
           <div className="tracking-summary">
-            <span>Contrato selecionado</span>
+            <span>CR selecionado</span>
 
             <strong>{contratoSelecionado}</strong>
           </div>

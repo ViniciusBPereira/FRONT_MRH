@@ -211,231 +211,161 @@
   background: #1d4ed8;
 }
 
-.secondary {
-  background: #eef4ff;
-  color: #2563eb;
-  padding: 9px 16px;
-}
+
 
 .secondary:hover {
   background: #dbeafe;
 }
 
-.danger {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 9px 16px;
-}
+
 
 .danger:hover {
   background: #fecaca;
 }
 
-.small {
-  padding: 8px 12px;
-  font-size: 13px;
-}
+
 /* =====================================================
-   TABELA
+   TABELA PLANO DE AÇÃO - PADRÃO ACOMPANHAMENTO
 ===================================================== */
 
 .action-table {
   margin-top: 10px;
-  border-top: 1px solid #edf2f7;
   overflow-x: auto;
-  background: #fff;
 }
 
+
+/* TABELA */
 .action-table table {
   width: 100%;
-  min-width: 1350px;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  font-size: 14px;
 }
 
-/* =====================================================
-   CABEÇALHO
-===================================================== */
 
-.action-table thead tr {
-  background: #f8fafc;
+/* CABEÇALHO */
+.action-table thead {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
 }
+
 
 .action-table th {
-  padding: 15px 18px;
-  font-size: 11px;
+  padding: 14px 16px;
+  text-align: center;
   font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #64748b;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #ffffff !important;
   white-space: nowrap;
 }
 
-.action-table th:first-child {
-  padding-left: 28px;
-}
-
-.action-table th:last-child {
-  text-align: center;
-}
-
-/* =====================================================
-   LINHAS
-===================================================== */
-
-.action-table tbody tr {
-  transition: 0.2s;
-}
-
-.action-table tbody tr:nth-child(even) {
-  background: #fbfcfe;
-}
-
-.action-table tbody tr:hover {
-  background: #eef6ff;
-}
 
 .action-table td {
-  padding: 18px;
-  border-bottom: 1px solid #edf2f7;
-  color: #334155;
-  font-size: 14px;
-  vertical-align: top;
-  line-height: 1.5;
+  padding: 14px 16px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
 }
 
-.action-table td:first-child {
-  padding-left: 28px;
+
+/* LINHAS */
+.action-table tbody tr {
+  transition: 0.2s ease;
 }
 
-/* =====================================================
-   LARGURA DAS COLUNAS
-===================================================== */
-.action-table td:nth-child(1) {
-  min-width: 220px;
+
+.action-table tbody tr:nth-child(even) {
+  background: #f8fafc;
 }
 
-.action-table td:nth-child(2) {
-  min-width: 250px;
+
+.action-table tbody tr:hover {
+  background: #eff6ff;
+}
+
+
+.action-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* BOTÕES */
+.action-table td:last-child {
+  white-space: nowrap;
+  width: 140px;
+}
+
+
+.action-table td:last-child button {
+
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+
+  width: auto !important;
+  min-width: 55px;
+
+  height: 28px;
+
+  padding: 4px 10px !important;
+  margin: 2px;
+
+  border: none;
+  border-radius: 6px;
+
+  font-size: 12px;
   font-weight: 600;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.action-table td:nth-child(3) {
-  min-width: 260px;
-}
 
-.action-table td:nth-child(4) {
-  min-width: 260px;
-}
-
-.action-table td:nth-child(5) {
-  min-width: 150px;
-}
-
-.action-table td:nth-child(6) {
-  min-width: 120px;
-  text-align: center;
-}
-
-.action-table td:nth-child(7) {
-  min-width: 130px;
-  text-align: center;
-}
-
-.action-table td:nth-child(8) {
-  min-width: 130px;
-  text-align: center;
-}
-
-.action-table td:nth-child(9) {
-  min-width: 190px;
-  text-align: center;
-}
-/* =====================================================
-   BADGES STATUS
-===================================================== */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.badge.todo {
-  color: #1d4ed8;
+/* EDITAR */
+.action-table td:last-child button:first-of-type {
   background: #dbeafe;
+  color: #1d4ed8;
 }
 
-.badge.doing {
-  color: #b45309;
-  background: #fef3c7;
+
+.action-table td:last-child button:first-of-type:hover {
+  background: #2563eb;
+  color: white;
+  transform: translateY(-1px);
 }
 
-.badge.done {
-  color: #15803d;
-  background: #dcfce7;
-}
 
-/* =====================================================
-   SINALEIRA
-===================================================== */
-
-.signal {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 92px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.signal.green {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.signal.yellow {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.signal.red {
+/* EXCLUIR */
+.action-table td:last-child button:last-of-type {
   background: #fee2e2;
-  color: #b91c1c;
+  color: #dc2626;
 }
 
-/* =====================================================
-   BOTÕES
-===================================================== */
 
-.table-actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
+.action-table td:last-child button:last-of-type:hover {
+  background: #dc2626;
+  color: white;
+  transform: translateY(-1px);
 }
 
-.table-actions button {
-  width: 90px;
-  min-width: 90px;
+
+/* TEXTO LONGO */
+.action-table td {
+  word-break: break-word;
 }
 
-.action-table td:last-child,
-.action-table th:last-child {
-  width: 190px;
-  min-width: 190px;
+
+/* TABELA VAZIA */
+.empty-table {
+  padding: 70px !important;
   text-align: center;
+  color: #94a3b8;
+  font-size: 15px;
 }
-
 /* =====================================================
    TABELA VAZIA
 ===================================================== */
@@ -636,8 +566,9 @@
   }
 
   .table-actions button {
-    width: 100%;
-  }
+  width: auto;
+  min-width: 65px;
+}
 }
 
 @media (max-width: 600px) {
@@ -667,4 +598,163 @@
 
     padding: 5px 10px;
   }
+}
+
+
+.action-buttons{
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    align-items:center;
+}
+
+.action-buttons button{
+    white-space:nowrap;
+}
+
+/* ===========================================
+   MODAL DE ARQUIVOS
+=========================================== */
+
+.files-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.45);
+    backdrop-filter:blur(2px);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+
+.files-modal-content{
+    width:760px;
+    max-width:95%;
+    max-height:85vh;
+    overflow:auto;
+
+    background:#fff;
+    border-radius:14px;
+    padding:24px;
+
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+
+.files-modal-content h3{
+    margin:0 0 6px;
+    font-size:22px;
+    color:#1e293b;
+}
+
+.files-modal-content p{
+    margin:0 0 18px;
+    color:#475569;
+}
+
+.files-modal-content hr{
+    margin:18px 0;
+    border:none;
+    border-top:1px solid #e5e7eb;
+}
+
+/* Upload */
+
+.files-modal-content input[type=file]{
+    width:100%;
+    padding:10px;
+    border:1px solid #dbe3ec;
+    border-radius:8px;
+    background:#f8fafc;
+    margin-bottom:15px;
+}
+
+.files-modal-content > button{
+    margin-bottom:20px;
+}
+
+/* Tabela */
+
+.files-modal-content table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.files-modal-content thead{
+    background:#263640;
+}
+
+.files-modal-content th{
+    color:#fff;
+    padding:12px;
+    text-align:left;
+    font-size:13px;
+}
+
+.files-modal-content td{
+    padding:12px;
+    border-bottom:1px solid #edf2f7;
+    vertical-align:middle;
+}
+
+.files-modal-content tbody tr:hover{
+    background:#f8fbff;
+}
+
+/* Nome do arquivo */
+
+.files-modal-content td:first-child{
+    width:75%;
+    word-break:break-word;
+}
+
+/* Coluna ações */
+
+.files-modal-content td:last-child{
+    width:180px;
+}
+
+.file-actions{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+}
+
+/* Botões */
+
+.file-actions button{
+    border:none;
+    border-radius:7px;
+    padding:8px 14px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+    transition:.2s;
+}
+
+.file-download{
+    background:#3b82f6;
+    color:#fff;
+}
+
+.file-download:hover{
+    background:#2563eb;
+}
+
+.file-delete{
+    background:#ef4444;
+    color:#fff;
+}
+
+.file-delete:hover{
+    background:#dc2626;
+}
+
+.modal-footer{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:20px;
+}
+
+.modal-footer button{
+    width:140px;
 }
