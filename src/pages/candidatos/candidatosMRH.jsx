@@ -25,7 +25,7 @@ function CandidatosMRH() {
   const [showCheckDocsModal, setShowCheckDocsModal] = useState(false);
 
   const [loading, setLoading] = useState(true);
-
+  const [showMoverModal, setShowMoverModal] = useState(false);
   const [showNovoModal, setShowNovoModal] = useState(false);
   const [showFichaModal, setShowFichaModal] = useState(false);
   const [showDocsModal, setShowDocsModal] = useState(false);
@@ -33,7 +33,7 @@ function CandidatosMRH() {
   const [candidatoSelecionado, setCandidatoSelecionado] = useState(null);
 
   const [popupAberto, setPopupAberto] = useState(null);
-
+  const [novaMRH, setNovaMRH] = useState("");
   const [formNovo, setFormNovo] = useState({
     nome: "",
     cpf: "",
@@ -233,6 +233,24 @@ function CandidatosMRH() {
     { field: "cpf", headerName: "CPF", flex: 0.6 },
     { field: "telefone", headerName: "Telefone", flex: 0.7 },
     { field: "email", headerName: "E-mail", flex: 1 },
+    {
+      field: "mover",
+      headerName: "Mover",
+      flex: 0.5,
+      sortable: false,
+      renderCell: (p) => (
+        <button
+          className="btn-docs"
+          onClick={() => {
+            setCandidatoSelecionado(p.row);
+            setNovaMRH("");
+            setShowMoverModal(true);
+          }}
+        >
+          Mover
+        </button>
+      ),
+    },
 
     {
       field: "validacoes",
@@ -414,7 +432,62 @@ function CandidatosMRH() {
           fechar={() => setShowDocsModal(false)}
         />
       )}
+      {showMoverModal && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-header">
+              <h3>Mover candidato</h3>
+            </div>
 
+            <div className="modal-form">
+              <label>Candidato</label>
+              <input value={candidatoSelecionado?.nome || ""} disabled />
+
+              <label>Nova MRH</label>
+              <input
+                type="number"
+                value={novaMRH}
+                onChange={(e) => setNovaMRH(e.target.value)}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn-cancel"
+                onClick={() => setShowMoverModal(false)}
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="btn-save"
+                onClick={async () => {
+                  try {
+                    const { data } = await api.put(
+                      `/candidatos/mover-mrh/${candidatoSelecionado.id}`,
+                      {
+                        mrhId: Number(novaMRH),
+                      },
+                    );
+
+                    alert(data.mensagem);
+
+                    setShowMoverModal(false);
+
+                    carregarCandidatos(false);
+                  } catch (err) {
+                    alert(
+                      err.response?.data?.mensagem || "MRH não encontrada.",
+                    );
+                  }
+                }}
+              >
+                Mover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* MODAL NOVO */}
       {showNovoModal && (
         <div className="modal-overlay">
