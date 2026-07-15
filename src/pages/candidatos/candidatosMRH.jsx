@@ -61,7 +61,7 @@ function CandidatosMRH() {
         if (!silent) setLoading(false);
       }
     },
-    [mrhId]
+    [mrhId],
   );
 
   useEffect(() => {
@@ -85,11 +85,31 @@ function CandidatosMRH() {
     form.append("arquivo", file);
 
     try {
-      await api.post(`/candidatos/importar-csv/${mrhId}`, form);
+      const { data } = await api.post(
+        `/candidatos/importar-csv/${mrhId}`,
+        form,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      alert(data.mensagem || "Importação realizada com sucesso.");
 
       carregarCandidatos(false);
     } catch (err) {
-      console.error("Erro ao importar CSV", err);
+      console.error(err);
+
+      const mensagem =
+        err.response?.data?.mensagem ||
+        err.message ||
+        "Erro ao importar arquivo.";
+
+      alert(mensagem);
+    } finally {
+      // permite importar o mesmo arquivo novamente
+      e.target.value = "";
     }
   }
 
@@ -101,10 +121,10 @@ function CandidatosMRH() {
       });
 
       setCandidatos((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, status: novoStatus } : c))
+        prev.map((c) => (c.id === id ? { ...c, status: novoStatus } : c)),
       );
       candidatosRef.current = candidatosRef.current.map((c) =>
-        c.id === id ? { ...c, status: novoStatus } : c
+        c.id === id ? { ...c, status: novoStatus } : c,
       );
     } catch (err) {
       console.error("Erro ao atualizar status:", err);
@@ -122,22 +142,22 @@ function CandidatosMRH() {
       });
 
       setCandidatos((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, [campo]: valor } : c))
+        prev.map((c) => (c.id === id ? { ...c, [campo]: valor } : c)),
       );
 
       candidatosRef.current = candidatosRef.current.map((c) =>
-        c.id === id ? { ...c, [campo]: valor } : c
+        c.id === id ? { ...c, [campo]: valor } : c,
       );
     } catch (err) {
       console.error("Erro ao atualizar validação:", err);
 
       if (anterior !== undefined) {
         setCandidatos((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, [campo]: anterior } : c))
+          prev.map((c) => (c.id === id ? { ...c, [campo]: anterior } : c)),
         );
 
         candidatosRef.current = candidatosRef.current.map((c) =>
-          c.id === id ? { ...c, [campo]: anterior } : c
+          c.id === id ? { ...c, [campo]: anterior } : c,
         );
       }
     }
@@ -147,13 +167,9 @@ function CandidatosMRH() {
   const validacoesCampos = [
     { label: "APT", campo: "validacaoAPT" },
     { label: "CARD", campo: "validacaoCARD" },
-    { label: "Ocorrências", campo: "validacaoOcorrencias" },
-    { label: "PF", campo: "validacaoBrickPF" },
-    { label: "Mandado", campo: "validacaoBrickMandado" },
     { label: "Processos", campo: "validacaoBrickProcessos" },
     { label: "2ª Etapa", campo: "validacaoSegundaEtapa" },
     { label: "Currículo App", campo: "validacaoCurriculoGPSvc" },
-    { label: "Reservista", campo: "validacaoReservista" },
   ];
 
   const opcoesValidacao = [
@@ -340,8 +356,13 @@ function CandidatosMRH() {
         <div className="header-btns">
           {/* IMPORTAR CSV */}
           <label className="btn csv-btn">
-            <FaFileCsv size={14} /> Importar CSV
-            <input type="file" accept=".csv" hidden onChange={importarCSV} />
+            <FaFileCsv size={14} /> Importar Planilha
+            <input
+              type="file"
+              accept=".csv,.xls,.xlsx"
+              hidden
+              onChange={importarCSV}
+            />
           </label>
 
           {/* NOVO CANDIDATO */}
