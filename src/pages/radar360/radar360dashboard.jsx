@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
 
 import "./radar360dashboard.css";
 import { api } from "../../services/api";
@@ -9,7 +8,6 @@ import PlanodeAcao from "./planodeacao.jsx";
 import AcaoPontual from "./acaopontual.jsx";
 
 export default function Radar360Dashboard() {
-  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [aba, setAba] = useState("dashboard");
   const [visits, setVisits] = useState([]);
@@ -17,6 +15,7 @@ export default function Radar360Dashboard() {
   const [actions, setActions] = useState([]);
   const [bpSelecionado, setBpSelecionado] = useState("");
   const [contratoSelecionado, setContratoSelecionado] = useState("");
+  const [visitEdit, setVisitEdit] = useState(null);
 
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -55,11 +54,6 @@ export default function Radar360Dashboard() {
 
     return () => clearInterval(timer);
   }, [carregar]);
-  useEffect(() => {
-  if (location.state?.editTracking) {
-    setAba("visit");
-  }
-}, [location.state]);
 
   // ====================
   // FILTROS
@@ -182,7 +176,14 @@ const contratoOk =
         100,
     }));
   }, [filteredVisits]);
+const editarVisita = (trackingId, visit) => {
+  setVisitEdit({
+    trackingId,
+    visit,
+  });
 
+  setAba("visit");
+};
   const proximasAcoes = useMemo(() => {
     return [...filteredActions]
       .filter((a) => a.stage !== "Concluído")
@@ -435,16 +436,23 @@ const contratoOk =
           </section>
         </>
       )}
-      {aba === "visit" && <NovaVisita />}
+      {aba === "visit" && (
+    <NovaVisita
+        editTracking={!!visitEdit}
+        trackingId={visitEdit?.trackingId}
+        visit={visitEdit?.visit}
+    />
+)}
       {aba === "tracking" && (
         <Acompanhamento
-          visits={filteredVisits}
-          tracking={filteredTracking}
-          actions={filteredActions}
-          bpSelecionado={bpSelecionado}
-          contratoSelecionado={contratoSelecionado}
-          onReload={carregar}
-        />
+    visits={filteredVisits}
+    tracking={filteredTracking}
+    actions={filteredActions}
+    bpSelecionado={bpSelecionado}
+    contratoSelecionado={contratoSelecionado}
+    onReload={carregar}
+    onEditVisit={editarVisita}
+/>
       )}
 
       {aba === "actions" && (
