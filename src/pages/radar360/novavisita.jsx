@@ -87,6 +87,46 @@ cr: "",
   
   const [form, setForm] = useState(initialState);
   const [loading, setLoading] = useState(false);
+
+  const handleChange = ({ target }) => {
+  const { name, value } = target;
+
+  const numericFields = [
+    "headcount",
+    "employees_approached",
+    "turnover",
+    "absenteeism",
+    "he_inefficiency",
+    "open_positions",
+    "replacement_days",
+    "labor_actions",
+    "warnings",
+    "enps",
+    "leadership_presence",
+    "leadership_communication",
+    "leadership_routine",
+    "leadership_deviation",
+    "climate_engagement",
+    "climate_listening",
+    "climate_relationship",
+    "climate_satisfaction",
+    "structure_resources",
+    "structure_staffing",
+    "structure_environment",
+    "structure_support",
+    "customer_expectation",
+    "customer_communication",
+    "customer_quality",
+    "customer_requests",
+  ];
+
+  setForm((old) => ({
+    ...old,
+    [name]: numericFields.includes(name)
+      ? Number(value)
+      : value,
+  }));
+};
   
 useEffect(() => {
   if (!editTracking || !visit) return;
