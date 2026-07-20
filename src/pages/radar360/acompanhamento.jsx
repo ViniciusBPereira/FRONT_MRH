@@ -113,10 +113,35 @@ await onReload();
       EDITAR
   ============================================ */
 
-  const handleEdit = (item) => {
+  const handleEdit = async (item) => {
+  try {
+    setLoading(true);
 
-  navigate(`/visitas/nova/${item.id}`);
+    const { data } = await api.get(
+      `/tracking/${item.id}/edit`,
+      {
+        headers: authHeader(),
+      }
+    );
 
+    navigate(`/visitas/nova/${item.id}`, {
+      state: {
+        editTracking: true,
+        trackingId: item.id,
+        visit: data,
+      },
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    alert(
+      err.response?.data?.message ||
+      "Erro ao carregar dados para edição."
+    );
+  } finally {
+    setLoading(false);
+  }
 };
 
   /* ============================================
