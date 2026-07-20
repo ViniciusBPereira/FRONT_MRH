@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import "./acompanhamento.css";
 import {
@@ -13,8 +12,7 @@ import {
   Legend,
 } from "recharts";
 
-export default function Tracking({ visits, tracking, contratoSelecionado,onReload }) {
-  const navigate = useNavigate();
+export default function Tracking({ visits, tracking, contratoSelecionado,onReload,onEditVisit }) {
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   });
@@ -124,13 +122,7 @@ await onReload();
       }
     );
 
-    navigate(`/visitas/nova/${item.id}`, {
-      state: {
-        editTracking: true,
-        trackingId: item.id,
-        visit: data,
-      },
-    });
+    onEditVisit(item.id, data);
 
   } catch (err) {
     console.error(err);
