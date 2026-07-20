@@ -121,18 +121,18 @@ useEffect(() => {
       setLoading(true);
 
       const payload = {
-        ...form,
+  ...form,
 
-        leadership_score: leadershipScore,
-        climate_score: climateScore,
-        structure_score: structureScore,
-        customer_score: customerScore,
+  leadership_score: leadershipScore,
+  climate_score: climateScore,
+  structure_score: structureScore,
+  customer_score: customerScore,
 
-        indicators_score: indicatorPreview,
-        final_score: finalPreview,
-        classification,
-        priority,
-      };
+  indicator_score: indicatorPreview,
+  final_score: finalPreview,
+  classification,
+  priority,
+};
       if (editTracking) {
 
   await api.put(
