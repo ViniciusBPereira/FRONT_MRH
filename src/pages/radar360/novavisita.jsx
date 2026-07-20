@@ -1,8 +1,17 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import "./novavisita.css";
 
 export default function NovaVisita() {
+
+  const navigate = useNavigate();
+const location = useLocation();
+
+const editTracking = location.state?.editTracking;
+const trackingId = location.state?.trackingId;
+const visit = location.state?.visit;
+  
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   });
@@ -74,17 +83,24 @@ cr: "",
     action_plan: [],
   };
 
+
+  
   const [form, setForm] = useState(initialState);
   const [loading, setLoading] = useState(false);
+  
+useEffect(() => {
+  if (!editTracking || !visit) return;
 
-  const handleChange = ({ target }) => {
-  const { name, value } = target;
-
-  setForm((old) => ({
-    ...old,
-    [name]: isNaN(value) ? value : Number(value),
-  }));
-};
+  setForm({
+    ...initialState,
+    ...visit,
+    visit_date: visit.visit_date
+      ? visit.visit_date.substring(0, 10)
+      : "",
+    root_cause: visit.root_cause || [],
+    action_plan: visit.action_plan || [],
+  });
+}, [editTracking, visit]);
 
   const average = (...values) => {
     console.log("Average:", values);
@@ -117,13 +133,35 @@ cr: "",
         classification,
         priority,
       };
-      await api.post("/visits", payload, {
-        headers: authHeader(),
-      });
+      if (editTracking) {
 
-      alert("Visita cadastrada com sucesso!");
+  await api.put(
+    `/tracking/${trackingId}/edit`,
+    payload,
+    {
+      headers: authHeader(),
+    }
+  );
 
-      limparFormulario();
+  alert("Visita e acompanhamento atualizados com sucesso.");
+
+  navigate(-1);
+
+} else {
+
+  await api.post(
+    "/visits",
+    payload,
+    {
+      headers: authHeader(),
+    }
+  );
+
+  alert("Visita cadastrada com sucesso.");
+
+  limparFormulario();
+
+}
     } catch (err) {
       console.error(err);
 
@@ -284,7 +322,11 @@ cr: "",
         <div>
           <span className="eyebrow">COLETA DE CAMPO</span>
 
-          <h2>Nova Visita BP</h2>
+          <h2>
+  {editTracking
+    ? "Editar Visita"
+    : "Nova Visita BP"}
+</h2>
         </div>
       </div>
 
@@ -952,9 +994,17 @@ cr: "",
             Limpar formulário
           </button>
 
-          <button type="submit" className="primary" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar Visita"}
-          </button>
+          <button
+  type="submit"
+  className="primary"
+  disabled={loading}
+>
+  {loading
+    ? "Salvando..."
+    : editTracking
+      ? "Atualizar Visita"
+      : "Salvar Visita"}
+</button>
         </div>
       </form>
     </div>
