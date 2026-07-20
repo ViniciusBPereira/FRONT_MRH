@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import "./acompanhamento.css";
 import {
@@ -13,6 +14,7 @@ import {
 } from "recharts";
 
 export default function Tracking({ visits, tracking, contratoSelecionado,onReload }) {
+  const navigate = useNavigate();
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   });
@@ -46,8 +48,6 @@ export default function Tracking({ visits, tracking, contratoSelecionado,onReloa
 
   const [loading, setLoading] = useState(false);
 
-  const [editingId, setEditingId] = useState(null);
-
   useEffect(() => {
   if (contratoSelecionado) {
     setForm((old) => ({
@@ -74,12 +74,12 @@ export default function Tracking({ visits, tracking, contratoSelecionado,onReloa
   ============================================ */
 
   const clearForm = () => {
-  setEditingId(null);
 
   setForm({
     ...initialState,
     cr: contratoSelecionado || "",
   });
+
 };
   /* ============================================
       SALVAR
@@ -91,23 +91,15 @@ export default function Tracking({ visits, tracking, contratoSelecionado,onReloa
     try {
       setLoading(true);
 
-      if (editingId) {
-        await api.put(`/tracking/${editingId}`, form, {
-          headers: authHeader(),
-        });
-      } else {
-        await api.post("/tracking", form, {
-          headers: authHeader(),
-        });
-      }
+     await api.post("/tracking", form, {
+  headers: authHeader(),
+});
 
       clearForm();
 await onReload();
       alert(
-        editingId
-          ? "Acompanhamento atualizado com sucesso."
-          : "Acompanhamento cadastrado com sucesso.",
-      );
+  "Acompanhamento cadastrado com sucesso."
+);
     } catch (err) {
       console.error(err);
 
@@ -122,30 +114,10 @@ await onReload();
   ============================================ */
 
   const handleEdit = (item) => {
-    setEditingId(item.id);
 
-    setForm({
-      cr: item.cr,
-      month: item.month,
+  navigate(`/visitas/nova/${item.id}`);
 
-      turnover: item.turnover,
-      absenteeism: item.absenteeism,
-      he_inefficiency: item.he_inefficiency,
-
-      labor_actions: item.labor_actions,
-
-      replacement_days: item.replacement_days,
-
-      headcount: item.headcount,
-
-      notes: item.notes || "",
-    });
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+};
 
   /* ============================================
       EXCLUIR
@@ -207,8 +179,8 @@ await onReload();
           <div className="tracking-card-header">
             <div>
               <h2>
-                {editingId ? "Editar acompanhamento" : "Novo acompanhamento"}
-              </h2>
+  Novo acompanhamento
+</h2>
 
               <small>Registre mensalmente os indicadores do contrato.</small>
             </div>
@@ -324,10 +296,8 @@ await onReload();
 
             <button type="submit" className="primary" disabled={loading}>
               {loading
-                ? "Salvando..."
-                : editingId
-                  ? "Atualizar acompanhamento"
-                  : "Salvar acompanhamento"}
+  ? "Salvando..."
+  : "Salvar acompanhamento"}
             </button>
           </div>
         </form>
