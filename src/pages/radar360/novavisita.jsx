@@ -1,16 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import "./novavisita.css";
 
-export default function NovaVisita() {
-
-  const navigate = useNavigate();
-const location = useLocation();
-
-const editTracking = location.state?.editTracking;
-const trackingId = location.state?.trackingId;
-const visit = location.state?.visit;
+export default function NovaVisita({
+  editTracking,
+  trackingId,
+  visit,
+}) {
   
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -185,7 +181,7 @@ useEffect(() => {
 
   alert("Visita e acompanhamento atualizados com sucesso.");
 
-  navigate(-1);
+  window.location.reload();
 
 } else {
 
