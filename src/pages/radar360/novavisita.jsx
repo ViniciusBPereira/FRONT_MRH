@@ -301,7 +301,6 @@ cr: "",
               Data da visita
               <input
                 type="date"
-                required
                 name="visit_date"
                 value={form.visit_date}
                 onChange={handleChange}
@@ -312,7 +311,6 @@ cr: "",
   PEC
   <input
     type="text"
-    required
     name="pec"
     value={form.pec}
     onChange={handleChange}
@@ -322,7 +320,6 @@ cr: "",
   CR
   <input
     type="text"
-    required
     name="cr"
     value={form.cr}
     onChange={handleChange}
@@ -333,7 +330,6 @@ cr: "",
               Cliente
               <input
                 type="text"
-                required
                 name="client"
                 value={form.client}
                 onChange={handleChange}
@@ -344,7 +340,6 @@ cr: "",
               Unidade
               <input
                 type="text"
-                required
                 name="unit"
                 value={form.unit}
                 onChange={handleChange}
@@ -355,7 +350,6 @@ cr: "",
               Business Partner
               <input
                 type="text"
-                required
                 name="bp"
                 value={form.bp}
                 onChange={handleChange}
@@ -366,7 +360,6 @@ cr: "",
               Liderança Responsável
               <input
                 type="text"
-                required
                 name="leadership_name"
                 value={form.leadership_name}
                 onChange={handleChange}
@@ -378,7 +371,6 @@ cr: "",
               <input
                 type="number"
                 min="0"
-                required
                 name="headcount"
                 value={form.headcount}
                 onChange={handleChange}
