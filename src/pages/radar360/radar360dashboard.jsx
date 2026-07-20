@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import "./radar360dashboard.css";
 import { api } from "../../services/api";
@@ -8,6 +9,7 @@ import PlanodeAcao from "./planodeacao.jsx";
 import AcaoPontual from "./acaopontual.jsx";
 
 export default function Radar360Dashboard() {
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [aba, setAba] = useState("dashboard");
   const [visits, setVisits] = useState([]);
@@ -53,6 +55,11 @@ export default function Radar360Dashboard() {
 
     return () => clearInterval(timer);
   }, [carregar]);
+  useEffect(() => {
+  if (location.state?.editTracking) {
+    setAba("visit");
+  }
+}, [location.state]);
 
   // ====================
   // FILTROS
