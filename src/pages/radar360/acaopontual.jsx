@@ -5,6 +5,8 @@ export default function AcaoPontual({
   visits,
   contratoSelecionado,
 }) {
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     cr: contratoSelecionado || "",
     data_execucao: "",
@@ -15,16 +17,23 @@ export default function AcaoPontual({
   });
 
   const [files, setFiles] = useState([]);
+
   const contratos = useMemo(() => {
-  return [...new Set(visits.map((v) => v.cr).filter(Boolean))].sort();
-}, [visits]);
-useEffect(() => {
+    return [
+      ...new Set(
+        visits
+          .map((v) => v.cr)
+          .filter(Boolean),
+      ),
+    ].sort();
+  }, [visits]);
+
+  useEffect(() => {
     setForm((old) => ({
       ...old,
       cr: contratoSelecionado || "",
     }));
   }, [contratoSelecionado]);
-  
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -35,34 +44,109 @@ useEffect(() => {
     }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    console.log({
-      ...form,
-      files,
-    });
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+
+      formData.append("cr", form.cr);
+
+      formData.append(
+        "description",
+        form.acao
+      );
+
+      formData.append(
+        "execution",
+        form.programacao
+      );
+
+      formData.append(
+        "indicators",
+        form.dados_visita
+      );
+
+      formData.append(
+        "due_date",
+        form.data_conclusao || form.data_execucao
+      );
+
+      formData.append(
+        "owner",
+        ""
+      );
+
+      formData.append(
+        "stage",
+        "CONCLUÍDO"
+      );
+
+      formData.append(
+        "action_type",
+        "PONTUAL"
+      );
+
+      files.forEach((file) => {
+        formData.append(
+          "files",
+          file
+        );
+      });
+
+      const response = await fetch(
+        "/api/actions",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Erro ao salvar."
+        );
+      }
+
+      alert("Ação cadastrada com sucesso!");
+
+      setForm({
+        cr: contratoSelecionado || "",
+        data_execucao: "",
+        acao: "",
+        programacao: "",
+        dados_visita: "",
+        data_conclusao: "",
+      });
+
+      setFiles([]);
+
+      e.target.reset();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="acao-page">
-
       <div className="acao-card">
 
         <div className="acao-header">
-
           <span className="acao-eyebrow">
             Radar BP
           </span>
 
-          <h2>
-            Ação Pontual
-          </h2>
+          <h2>Ação Pontual</h2>
 
           <p>
             Cadastro de ações executadas fora do plano de ação.
           </p>
-
         </div>
 
         <form
@@ -73,23 +157,28 @@ useEffect(() => {
           <div className="form-grid">
 
             <div className="form-group">
-  <label>Contrato</label>
+              <label>Contrato</label>
 
-  <select
-    name="cr"
-    value={form.cr}
-    onChange={handleChange}
-    required
-  >
-    <option value="">Selecione o contrato</option>
+              <select
+                name="cr"
+                value={form.cr}
+                onChange={handleChange}
+                required
+              >
+                <option value="">
+                  Selecione o contrato
+                </option>
 
-    {contratos.map((cr) => (
-      <option key={cr} value={cr}>
-        {cr}
-      </option>
-    ))}
-  </select>
-</div>
+                {contratos.map((cr) => (
+                  <option
+                    key={cr}
+                    value={cr}
+                  >
+                    {cr}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="form-group">
               <label>Data da ação</label>
@@ -104,7 +193,9 @@ useEffect(() => {
             </div>
 
             <div className="form-group full">
-              <label>O que será feito</label>
+              <label>
+                O que será feito
+              </label>
 
               <textarea
                 rows={4}
@@ -117,7 +208,9 @@ useEffect(() => {
             </div>
 
             <div className="form-group full">
-              <label>Programação</label>
+              <label>
+                Programação
+              </label>
 
               <textarea
                 rows={4}
@@ -129,7 +222,9 @@ useEffect(() => {
             </div>
 
             <div className="form-group full">
-              <label>Dados da visita</label>
+              <label>
+                Dados da visita
+              </label>
 
               <textarea
                 rows={4}
@@ -141,40 +236,43 @@ useEffect(() => {
             </div>
 
             <div className="form-group full">
-              <label>Fotos / PDF</label>
+              <label>
+                Fotos / PDF
+              </label>
 
               <input
                 type="file"
                 multiple
                 accept="image/*,.pdf"
                 onChange={(e) =>
-                  setFiles([...e.target.files])
+                  setFiles(
+                    Array.from(
+                      e.target.files
+                    )
+                  )
                 }
               />
 
               {files.length > 0 && (
-
                 <div className="files-preview">
-
-                  {files.map((file, index) => (
-
-                    <div
-                      key={index}
-                      className="file-item"
-                    >
-                      📎 {file.name}
-                    </div>
-
-                  ))}
-
+                  {files.map(
+                    (file, index) => (
+                      <div
+                        key={index}
+                        className="file-item"
+                      >
+                        📎 {file.name}
+                      </div>
+                    )
+                  )}
                 </div>
-
               )}
-
             </div>
 
             <div className="form-group">
-              <label>Data de conclusão</label>
+              <label>
+                Data de conclusão
+              </label>
 
               <input
                 type="date"
@@ -191,8 +289,11 @@ useEffect(() => {
             <button
               type="submit"
               className="primary"
+              disabled={loading}
             >
-              Salvar Ação
+              {loading
+                ? "Salvando..."
+                : "Salvar Ação"}
             </button>
 
           </div>
@@ -200,7 +301,6 @@ useEffect(() => {
         </form>
 
       </div>
-
     </div>
   );
 }
