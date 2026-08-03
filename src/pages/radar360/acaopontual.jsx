@@ -159,28 +159,27 @@ export default function AcaoPontual({
           <div className="form-grid">
 
             <div className="form-group">
-              <label>Contrato</label>
+  <label>Contrato</label>
 
-              <select
-                name="cr"
-                value={form.cr}
-                onChange={handleChange}
-                required
-              >
-                <option value="">
-                  Selecione o contrato
-                </option>
+  <input
+    type="text"
+    name="cr"
+    list="lista-contratos"
+    value={form.cr}
+    onChange={handleChange}
+    placeholder="Digite ou selecione um contrato"
+    required
+  />
 
-                {contratos.map((cr) => (
-                  <option
-                    key={cr}
-                    value={cr}
-                  >
-                    {cr}
-                  </option>
-                ))}
-              </select>
-            </div>
+  <datalist id="lista-contratos">
+    {contratos.map((cr) => (
+      <option
+        key={cr}
+        value={cr}
+      />
+    ))}
+  </datalist>
+</div>
 
             <div className="form-group">
               <label>Data da ação</label>
