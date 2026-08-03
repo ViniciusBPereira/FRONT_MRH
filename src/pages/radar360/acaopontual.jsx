@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { api } from "../../services/api";
 import "./acaopontual.css";
 
 export default function AcaoPontual({
   visits,
   contratoSelecionado,
+  onReload,
 }) {
+  const authHeader = () => ({
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  });
+
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -23,7 +29,7 @@ export default function AcaoPontual({
       ...new Set(
         visits
           .map((v) => v.cr)
-          .filter(Boolean),
+          .filter(Boolean)
       ),
     ].sort();
   }, [visits]);
@@ -70,13 +76,13 @@ export default function AcaoPontual({
       );
 
       formData.append(
-        "due_date",
-        form.data_conclusao || form.data_execucao
+        "owner",
+        ""
       );
 
       formData.append(
-        "owner",
-        ""
+        "due_date",
+        form.data_conclusao || form.data_execucao
       );
 
       formData.append(
@@ -84,35 +90,22 @@ export default function AcaoPontual({
         "CONCLUÍDO"
       );
 
-      formData.append(
-        "action_type",
-        "PONTUAL"
-      );
-
       files.forEach((file) => {
-        formData.append(
-          "files",
-          file
-        );
+        formData.append("files", file);
       });
 
-      const response = await fetch(
-        "/api/actions",
+      await api.post(
+        "/actions",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            ...authHeader(),
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Erro ao salvar."
-        );
-      }
-
-      alert("Ação cadastrada com sucesso!");
+      alert("Ação cadastrada com sucesso.");
 
       setForm({
         cr: contratoSelecionado || "",
@@ -126,8 +119,17 @@ export default function AcaoPontual({
       setFiles([]);
 
       e.target.reset();
+
+      if (onReload) {
+        await onReload();
+      }
     } catch (err) {
-      alert(err.message);
+      console.error(err);
+
+      alert(
+        err.response?.data?.message ||
+          "Erro ao salvar ação."
+      );
     } finally {
       setLoading(false);
     }
