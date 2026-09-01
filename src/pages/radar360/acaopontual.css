@@ -159,3 +159,40 @@ input[type=file]:hover {
     width: 100%;
   }
 }
+/* ============================================================
+   TEXTO DOS CAMPOS DO FORMULÁRIO
+   ============================================================ */
+
+.acao-page input,
+.acao-page textarea,
+.acao-page select {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+/* Texto digitado */
+.acao-page input::placeholder,
+.acao-page textarea::placeholder {
+  color: #666 !important;
+  opacity: 1;
+}
+
+/* Opções do select */
+.acao-page select option {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+/* Campo de data */
+.acao-page input[type="date"] {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+/* Quando o campo estiver desabilitado */
+.acao-page input:disabled,
+.acao-page textarea:disabled,
+.acao-page select:disabled {
+  color: #000 !important;
+  background-color: #f5f5f5 !important;
+}

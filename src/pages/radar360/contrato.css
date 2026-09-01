@@ -1,0 +1,160 @@
+.contrato-page {
+  width: 100%;
+}
+
+.contrato-card {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 24px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  background: #ffffff;
+}
+
+.contrato-header {
+  margin-bottom: 24px;
+}
+
+.contrato-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+
+  color: #2563eb;
+}
+
+.contrato-header h2 {
+  margin: 0;
+
+  font-size: 24px;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+.contrato-header p {
+  margin: 6px 0 0;
+
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.contrato-form {
+  width: 100%;
+}
+
+.contrato-form .form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 18px;
+}
+
+.contrato-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.contrato-form label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.contrato-form input {
+  width: 100%;
+  box-sizing: border-box;
+
+  min-height: 42px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  color: #111827;
+
+  font-size: 13px;
+
+  outline: none;
+}
+
+.contrato-form input:focus {
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(37, 99, 235, 0.12);
+}
+
+.buttons {
+  display: flex;
+
+  gap: 10px;
+
+  margin-top: 24px;
+}
+
+.buttons button {
+  min-height: 40px;
+
+  padding: 0 18px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  color: #111827;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.buttons button:hover {
+  background: #f9fafb;
+}
+
+.buttons button.primary {
+  border-color: #2563eb;
+
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.buttons button.primary:hover {
+  background: #1d4ed8;
+}
+
+.buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .contrato-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bi-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bi-open-button {
+    width: 100%;
+  }
+}

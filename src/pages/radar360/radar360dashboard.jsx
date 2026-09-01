@@ -8,6 +8,8 @@ import NovaVisita from "./novavisita.jsx";
 import Acompanhamento from "./acompanhamento.jsx";
 import PlanodeAcao from "./planodeacao.jsx";
 import AcaoPontual from "./acaopontual.jsx";
+import Contrato from "./contrato.jsx";
+import Dashboard from "./dashboard.jsx";
 
 /* ============================================================
    CONFIGURAÇÃO
@@ -17,6 +19,14 @@ const TABS = [
   {
     id: "dashboard",
     label: "Visão Geral",
+  },
+  {
+    id: "bi",
+    label: "Dashboard",
+  },
+  {
+    id: "contract",
+    label: "Contrato",
   },
   {
     id: "visit",
@@ -189,9 +199,9 @@ export default function Radar360Dashboard() {
     return () => clearInterval(interval);
   }, [carregar]);
 
-  /* ==========================================================
+    /* ==========================================================
      BASE ÚNICA DOS CONTRATOS
-     
+
      O filtro passa a usar /contracts como fonte principal.
      Isso evita depender de existir uma visita para um contrato
      aparecer no filtro.
@@ -199,6 +209,10 @@ export default function Radar360Dashboard() {
 
   const contratosBase = useMemo(() => {
     const mapa = new Map();
+
+    // ========================================================
+    // 1. CONTRATOS — fonte principal
+    // ========================================================
 
     contracts.forEach((contract) => {
       const cr = getCR(contract);
@@ -215,30 +229,52 @@ export default function Radar360Dashboard() {
       });
     });
 
-    /*
-      Caso algum CR exista nas visitas mas ainda não tenha
-      vindo corretamente pelo endpoint de contratos, adicionamos
-      como fallback.
-    */
+    // ========================================================
+    // 2. VISITAS — fallback
+    //
+    // Caso algum CR exista nas visitas mas ainda não esteja
+    // corretamente presente em /contracts, adicionamos.
+    // ========================================================
+
     visits.forEach((visit) => {
-      const cr = getCR(visit);
+  const cr = getCR(visit);
 
-      if (!cr || mapa.has(cr)) {
-        return;
-      }
+  if (!cr) {
+    return;
+  }
 
-      mapa.set(cr, {
-        cr,
-        bp: getBP(visit),
-        original: null,
-      });
+  const bp = getBP(visit);
+  const existente = mapa.get(cr);
+
+  // Se o contrato ainda não existe, cria pelo registro da visita
+  if (!existente) {
+    mapa.set(cr, {
+      cr,
+      bp,
+      original: null,
     });
+
+    return;
+  }
+
+  // Se o contrato existe, mas não tem BP,
+  // aproveita o BP encontrado na visita
+  if (!existente.bp && bp) {
+    mapa.set(cr, {
+      ...existente,
+      bp,
+    });
+  }
+});
+
+    // ========================================================
+    // 3. RESULTADO FINAL
+    // ========================================================
 
     return Array.from(mapa.values()).sort((a, b) =>
       a.cr.localeCompare(b.cr, "pt-BR"),
     );
   }, [contracts, visits]);
-
   /* ==========================================================
      BPs
   ========================================================== */
@@ -1051,7 +1087,23 @@ export default function Radar360Dashboard() {
           </section>
         </main>
       )}
+      {/* ======================================================
+          DASHBOARD BI
+      ====================================================== */}
 
+      {activeTab === "bi" && (
+        <Dashboard />
+      )}
+
+            {/* ======================================================
+          CADASTRO DE CONTRATO
+      ====================================================== */}
+
+      {activeTab === "contract" && (
+        <Contrato
+          onReload={carregar}
+        />
+      )}
       {/* ======================================================
           NOVA / EDITAR VISITA
       ====================================================== */}

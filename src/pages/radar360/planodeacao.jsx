@@ -1,183 +1,458 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import "./planodeacao.css";
 
-export default function ActionPlan({ actions, visits, contratoSelecionado }) {
+export default function ActionPlan({
+  actions: actionsProp = [],
+  contracts: contractsProp = [],
+  contratoSelecionado = "",
+}) {
+  // ============================================================
+  // AUTH
+  // ============================================================
+
   const authHeader = () => ({
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
+    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
   });
-async function handleFiles(action) {
-  setSelectedAction(action);
 
-  try {
-    const { data } = await api.get(
-      `/actions/${action.id}/files`,
-      {
-        headers: authHeader(),
-      }
-    );
+  // ============================================================
+  // FORM
+  // ============================================================
 
-    setFiles(data);
-  } catch {
-    alert("Erro ao carregar arquivos.");
-  }
-}
-
-
-
-  const initialState = {
-    visit_id: "",
-    cr: contratoSelecionado || "",
+  const emptyForm = {
+    contract_id: "",
     description: "",
-    execution: "",
+    execution_plan: "",
     indicators: "",
-    owner: "",
+    responsible: "",
     due_date: "",
-    stage: "todo",
+    status: "A fazer",
   };
 
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
-const [selectedAction, setSelectedAction] = useState(null);
-const [files, setFiles] = useState([]);
-const [selectedFiles, setSelectedFiles] = useState([]);
-const [uploading, setUploading] = useState(false);
 
-  const contracts = useMemo(() => {
-    return [...new Set(visits.map((v) => v.cr).filter(Boolean))].sort();
-  }, [visits]);
+  // ============================================================
+  // AÇÕES
+  // ============================================================
+
+  const [localActions, setLocalActions] = useState(
+    Array.isArray(actionsProp) ? actionsProp : []
+  );
+
+  // ============================================================
+  // CONTRATOS
+  // ============================================================
+
+  const [contracts, setContracts] = useState(
+    Array.isArray(contractsProp) ? contractsProp : []
+  );
+
+  const [contractsLoading, setContractsLoading] = useState(false);
+  const [contractsError, setContractsError] = useState("");
+
+  // ============================================================
+  // ARQUIVOS
+  // ============================================================
+
+  const [selectedAction, setSelectedAction] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  // ============================================================
+  // SINCRONIZAR AÇÕES VINDAS DO PAI
+  // ============================================================
+
+  useEffect(() => {
+    if (Array.isArray(actionsProp)) {
+      setLocalActions(actionsProp);
+    }
+  }, [actionsProp]);
+
+  // ============================================================
+  // BUSCAR CONTRATOS DIRETAMENTE DA API
+  // ============================================================
+
+  async function loadContracts() {
+    try {
+      setContractsLoading(true);
+      setContractsError("");
+
+      console.log("[ACTION FRONT] Buscando contratos em GET /contracts");
+
+      const response = await api.get("/contracts", {
+        headers: authHeader(),
+      });
+
+      console.log(
+        "[ACTION FRONT] Resposta /contracts:",
+        response.data
+      );
+
+      /*
+       * Aceita os formatos:
+       *
+       * [
+       *   { id: 1, name: "Contrato 001" }
+       * ]
+       *
+       * ou:
+       *
+       * {
+       *   contracts: [...]
+       * }
+       *
+       * ou:
+       *
+       * {
+       *   data: [...]
+       * }
+       */
+
+      let data = response.data;
+
+      if (Array.isArray(data)) {
+        setContracts(data);
+        return;
+      }
+
+      if (Array.isArray(data?.contracts)) {
+        setContracts(data.contracts);
+        return;
+      }
+
+      if (Array.isArray(data?.data)) {
+        setContracts(data.data);
+        return;
+      }
+
+      console.warn(
+        "[ACTION FRONT] /contracts não retornou uma lista:",
+        data
+      );
+
+      setContracts([]);
+      setContractsError(
+        "A API de contratos não retornou uma lista válida."
+      );
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro ao carregar contratos:",
+        error.response?.data || error
+      );
+
+      setContracts([]);
+      setContractsError(
+        error.response?.data?.message ||
+          "Não foi possível carregar os contratos."
+      );
+    } finally {
+      setContractsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadContracts();
+  }, []);
+
+  // ============================================================
+  // NORMALIZAR CONTRATOS
+  // ============================================================
+
+  const normalizedContracts = useMemo(() => {
+    if (!Array.isArray(contracts)) {
+      return [];
+    }
+
+    return contracts
+      .map((contract) => {
+        if (!contract || typeof contract !== "object") {
+          return null;
+        }
+
+        const id =
+          contract.id ??
+          contract.contract_id ??
+          contract.contractId;
+
+        if (
+          id === undefined ||
+          id === null ||
+          String(id).trim() === ""
+        ) {
+          return null;
+        }
+
+        /*
+         * Aqui priorizamos os campos mais comuns.
+         *
+         * Se sua API possui "name", ele será usado.
+         * Se não possui, tentamos os outros.
+         */
+
+        const name =
+          contract.name ??
+          contract.contract_name ??
+          contract.contractName ??
+          contract.number ??
+          contract.code ??
+          contract.description ??
+          `Contrato #${id}`;
+
+        return {
+          id: String(id),
+          name: String(name),
+          original: contract,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR", {
+          numeric: true,
+          sensitivity: "base",
+        })
+      );
+  }, [contracts]);
+
+  // ============================================================
+  // INICIALIZAR CONTRATO SELECIONADO
+  // ============================================================
+
+  useEffect(() => {
+    if (editingId) {
+      return;
+    }
+
+    if (contratoSelecionado !== undefined) {
+      setForm((old) => ({
+        ...old,
+        contract_id: contratoSelecionado
+          ? String(contratoSelecionado)
+          : old.contract_id,
+      }));
+    }
+  }, [contratoSelecionado, editingId]);
+
+  // ============================================================
+  // AÇÕES FILTRADAS
+  // ============================================================
 
   const filteredActions = useMemo(() => {
-    if (!contratoSelecionado) return actions;
+    if (!Array.isArray(localActions)) {
+      return [];
+    }
 
-    return actions.filter((item) => item.cr === contratoSelecionado);
-  }, [actions, contratoSelecionado]);
+    if (!contratoSelecionado) {
+      return localActions;
+    }
+
+    return localActions.filter(
+      (item) =>
+        String(item.contract_id) ===
+        String(contratoSelecionado)
+    );
+  }, [localActions, contratoSelecionado]);
+
+  // ============================================================
+  // PROGRESSO
+  // ============================================================
 
   const progress = useMemo(() => {
-    const done = filteredActions.filter((a) => a.stage === "done").length;
+    if (!filteredActions.length) {
+      return 0;
+    }
 
-    return Math.round((done / (filteredActions.length || 1)) * 100);
+    const done = filteredActions.filter(
+      (action) => action.status === "Concluído"
+    ).length;
+
+    return Math.round(
+      (done / filteredActions.length) * 100
+    );
   }, [filteredActions]);
 
-  function handleChange({ target }) {
-    const { name, value } = target;
+  // ============================================================
+  // ALTERAR FORM
+  // ============================================================
+
+  function handleChange(event) {
+    const { name, value } = event.target;
 
     setForm((old) => ({
       ...old,
       [name]: value,
     }));
   }
-async function removeFile(fileId) {
 
-    if (!window.confirm("Excluir arquivo?"))
-        return;
+  // ============================================================
+  // LIMPAR FORMULÁRIO
+  // ============================================================
 
-    try {
-
-        await api.delete(
-            `/actions/${selectedAction.id}/files/${fileId}`,
-            {
-                headers: authHeader()
-            }
-        );
-
-        setFiles(files.filter(f => f.id !== fileId));
-
-    } catch {
-
-        alert("Erro ao excluir.");
-
-    }
-
-}
   function clearForm() {
     setEditingId(null);
 
     setForm({
-  ...initialState,
-  cr: contratoSelecionado || "",
-});
+      ...emptyForm,
+      contract_id: contratoSelecionado
+        ? String(contratoSelecionado)
+        : "",
+    });
   }
-async function uploadActionFiles() {
-  if (!selectedFiles.length) return;
 
-  const formData = new FormData();
+  // ============================================================
+  // SALVAR
+  // ============================================================
 
-  selectedFiles.forEach(file => {
-    formData.append("files", file);
-  });
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-  try {
-    setUploading(true);
+    if (!form.contract_id) {
+      alert("Selecione um contrato.");
+      return;
+    }
 
-    const { data } = await api.post(
-      `/actions/${selectedAction.id}/files`,
-      formData,
-      {
-        headers: {
-          ...authHeader(),
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    setFiles(data);
-
-    setSelectedFiles([]);
-
-    alert("Arquivos enviados.");
-  } catch {
-    alert("Erro ao enviar.");
-  } finally {
-    setUploading(false);
-  }
-}
-  async function handleSubmit(e) {
-    e.preventDefault();
+    if (!form.description.trim()) {
+      alert("Informe a descrição da ação.");
+      return;
+    }
 
     try {
       setLoading(true);
 
+      const payload = {
+        contract_id: form.contract_id,
+        description: form.description.trim(),
+
+        execution_plan:
+          form.execution_plan.trim() || null,
+
+        indicators:
+          form.indicators.trim() || null,
+
+        responsible:
+          form.responsible.trim() || null,
+
+        due_date:
+          form.due_date || null,
+
+        status:
+          form.status || "A fazer",
+      };
+
+      console.log(
+        "[ACTION FRONT] Payload:",
+        payload
+      );
+
+      let response;
+
       if (editingId) {
-        await api.put(`/actions/${editingId}`, form, {
-          headers: authHeader(),
-        });
+        response = await api.put(
+          `/actions/${editingId}`,
+          payload,
+          {
+            headers: authHeader(),
+          }
+        );
       } else {
-        await api.post("/actions", form, {
-          headers: authHeader(),
-        });
+        response = await api.post(
+          "/actions",
+          payload,
+          {
+            headers: authHeader(),
+          }
+        );
+      }
+
+      const savedAction = response.data;
+
+      console.log(
+        "[ACTION FRONT] Resposta:",
+        savedAction
+      );
+
+      if (editingId) {
+        setLocalActions((old) =>
+          old.map((item) =>
+            String(item.id) === String(editingId)
+              ? savedAction
+              : item
+          )
+        );
+
+        alert("Plano atualizado com sucesso.");
+      } else {
+        setLocalActions((old) => [
+          ...old,
+          savedAction,
+        ]);
+
+        alert("Plano criado com sucesso.");
       }
 
       clearForm();
-
-      alert(
-        editingId
-          ? "Plano atualizado com sucesso."
-          : "Plano criado com sucesso.",
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro ao salvar plano:",
+        error
       );
 
-      window.location.reload();
-    } catch (err) {
-      alert(err.response?.data?.message || "Erro ao salvar.");
+      console.error(
+        "[ACTION FRONT] Status:",
+        error.response?.status
+      );
+
+      console.error(
+        "[ACTION FRONT] Response:",
+        error.response?.data
+      );
+
+      alert(
+        error.response?.data?.message ||
+          error.response?.data?.detail ||
+          "Erro ao salvar plano de ação."
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  // ============================================================
+  // EDITAR
+  // ============================================================
+
   function handleEdit(action) {
     setEditingId(action.id);
 
     setForm({
-  visit_id: action.visit_id || "",
-  cr: action.cr,
-  description: action.description,
-  execution: action.execution,
-  indicators: action.indicators,
-  owner: action.owner,
-  due_date: action.due_date?.slice(0, 10),
-  stage: action.stage,
-});
+      contract_id:
+        action.contract_id !== undefined &&
+        action.contract_id !== null
+          ? String(action.contract_id)
+          : "",
+
+      description:
+        action.description || "",
+
+      execution_plan:
+        action.execution_plan || "",
+
+      indicators:
+        action.indicators || "",
+
+      responsible:
+        action.responsible || "",
+
+      due_date:
+        action.due_date
+          ? String(action.due_date).slice(0, 10)
+          : "",
+
+      status:
+        action.status || "A fazer",
+    });
 
     window.scrollTo({
       top: 0,
@@ -185,32 +460,95 @@ async function uploadActionFiles() {
     });
   }
 
+  // ============================================================
+  // EXCLUIR
+  // ============================================================
+
   async function handleDelete(id) {
-    if (!window.confirm("Deseja excluir esta ação?")) return;
+    const confirmed = window.confirm(
+      "Deseja excluir esta ação?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
 
     try {
       await api.delete(`/actions/${id}`, {
         headers: authHeader(),
       });
 
-      window.location.reload();
-    } catch {
-      alert("Erro ao excluir ação.");
+      setLocalActions((old) =>
+        old.filter(
+          (item) =>
+            String(item.id) !== String(id)
+        )
+      );
+
+      if (
+        selectedAction &&
+        String(selectedAction.id) === String(id)
+      ) {
+        setSelectedAction(null);
+      }
+
+      alert("Ação excluída com sucesso.");
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro ao excluir:",
+        error.response?.data || error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Erro ao excluir ação."
+      );
     }
   }
 
+  // ============================================================
+  // SINAL
+  // ============================================================
+
   function getSignal(action) {
-    if (action.stage === "done") {
+    if (action.status === "Concluído") {
       return {
         text: "Concluído",
         className: "green",
       };
     }
 
-    const today = new Date();
-    const due = new Date(action.due_date);
+    if (!action.due_date) {
+      return {
+        text: "Sem prazo",
+        className: "yellow",
+      };
+    }
 
-    const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    const today = new Date();
+
+    today.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    const due = new Date(
+      action.due_date
+    );
+
+    due.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    const diff = Math.ceil(
+      (due - today) /
+        (1000 * 60 * 60 * 24)
+    );
 
     if (diff < 0) {
       return {
@@ -231,37 +569,339 @@ async function uploadActionFiles() {
       className: "green",
     };
   }
+
+  // ============================================================
+  // NOME DO CONTRATO
+  // ============================================================
+
+  function getContractName(contractId) {
+    if (
+      contractId === undefined ||
+      contractId === null ||
+      contractId === ""
+    ) {
+      return "-";
+    }
+
+    const contract =
+      normalizedContracts.find(
+        (item) =>
+          String(item.id) ===
+          String(contractId)
+      );
+
+    return (
+      contract?.name ||
+      `Contrato #${contractId}`
+    );
+  }
+
+  // ============================================================
+  // ARQUIVOS
+  // ============================================================
+
+  async function handleFiles(action) {
+    setSelectedAction(action);
+    setFiles([]);
+    setSelectedFiles([]);
+
+    try {
+      const { data } = await api.get(
+        `/actions/${action.id}/files`,
+        {
+          headers: authHeader(),
+        }
+      );
+
+      setFiles(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro ao carregar arquivos:",
+        error.response?.data || error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Erro ao carregar arquivos."
+      );
+    }
+  }
+
+  // ============================================================
+  // UPLOAD
+  // ============================================================
+
+  async function uploadActionFiles() {
+    if (
+      !selectedAction ||
+      !selectedFiles.length
+    ) {
+      return;
+    }
+
+    const formData = new FormData();
+
+    selectedFiles.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    try {
+      setUploading(true);
+
+      const { data } =
+        await api.post(
+          `/actions/${selectedAction.id}/files`,
+          formData,
+          {
+            headers: {
+              ...authHeader(),
+              "Content-Type":
+                "multipart/form-data",
+            },
+          }
+        );
+
+      setFiles(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+
+      setSelectedFiles([]);
+
+      /*
+       * Atualiza a contagem de arquivos
+       * na tabela sem recarregar a página.
+       */
+      setLocalActions((old) =>
+        old.map((item) =>
+          String(item.id) ===
+          String(selectedAction.id)
+            ? {
+                ...item,
+                files:
+                  Array.isArray(data)
+                    ? data
+                    : [],
+              }
+            : item
+        )
+      );
+
+      alert(
+        "Arquivos enviados com sucesso."
+      );
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro no upload:",
+        error.response?.data ||
+          error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Erro ao enviar arquivos."
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // ============================================================
+  // DOWNLOAD DO ARQUIVO
+  // ============================================================
+
+  async function downloadFile(file) {
+    if (!selectedAction || !file) {
+      return;
+    }
+
+    try {
+      const response = await api.get(
+        `/actions/${selectedAction.id}/files/${file.id}`,
+        {
+          headers: authHeader(),
+          responseType: "blob",
+        }
+      );
+
+      const blobUrl =
+        window.URL.createObjectURL(
+          new Blob([response.data])
+        );
+
+      const link =
+        document.createElement("a");
+
+      link.href = blobUrl;
+
+      link.download =
+        file.originalName ||
+        file.name ||
+        "arquivo";
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(
+        blobUrl
+      );
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro ao baixar arquivo:",
+        error.response?.data ||
+          error
+      );
+
+      alert(
+        "Erro ao baixar arquivo."
+      );
+    }
+  }
+
+  // ============================================================
+  // REMOVER ARQUIVO
+  // ============================================================
+
+  async function removeFile(fileId) {
+    if (
+      !window.confirm(
+        "Excluir arquivo?"
+      )
+    ) {
+      return;
+    }
+
+    if (!selectedAction) {
+      return;
+    }
+
+    try {
+      await api.delete(
+        `/actions/${selectedAction.id}/files/${fileId}`,
+        {
+          headers: authHeader(),
+        }
+      );
+
+      setFiles((old) =>
+        old.filter(
+          (file) =>
+            String(file.id) !==
+            String(fileId)
+        )
+      );
+
+      setLocalActions((old) =>
+        old.map((item) => {
+          if (
+            String(item.id) !==
+            String(selectedAction.id)
+          ) {
+            return item;
+          }
+
+          return {
+            ...item,
+            files: Array.isArray(item.files)
+              ? item.files.filter(
+                  (file) =>
+                    String(file.id) !==
+                    String(fileId)
+                )
+              : [],
+          };
+        })
+      );
+    } catch (error) {
+      console.error(
+        "[ACTION FRONT] Erro ao excluir arquivo:",
+        error.response?.data ||
+          error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Erro ao excluir arquivo."
+      );
+    }
+  }
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <div className="action-page">
       <div className="action-card">
+
+        {/* =====================================================
+            HEADER
+        ====================================================== */}
+
         <div className="action-header">
           <div>
-            <span className="action-eyebrow">Execução Assistida</span>
+            <span className="action-eyebrow">
+              Execução Assistida
+            </span>
 
-            <h2>Plano consolidado por contrato</h2>
+            <h2>
+              Plano de Ação
+            </h2>
 
             <p>
-              Cadastre ações, acompanhe a execução e monitore o progresso do
-              plano de ação.
+              Cadastre, acompanhe e
+              gerencie os planos de
+              ação diretamente por
+              contrato.
             </p>
           </div>
         </div>
 
-        <form className="action-form-horizontal" onSubmit={handleSubmit}>
-          <select
-  name="cr"
-  value={form.cr}
-  onChange={handleChange}
-  required
->
-  <option value="">CR</option>
+        {/* =====================================================
+            FORMULÁRIO
+        ====================================================== */}
 
-  {contracts.map((cr) => (
-    <option key={cr} value={cr}>
-      {cr}
-    </option>
-  ))}
-</select>
+        <form
+          className="action-form-horizontal"
+          onSubmit={handleSubmit}
+        >
+
+          {/* CONTRATO */}
+
+          <select
+            name="contract_id"
+            value={form.contract_id}
+            onChange={handleChange}
+            required
+            disabled={contractsLoading}
+          >
+            <option value="">
+              {contractsLoading
+                ? "Carregando contratos..."
+                : "Selecione o contrato"}
+            </option>
+
+            {normalizedContracts.map(
+              (contract) => (
+                <option
+                  key={contract.id}
+                  value={contract.id}
+                >
+                  {contract.name}
+                </option>
+              )
+            )}
+          </select>
+
+          {/* DESCRIÇÃO */}
 
           <input
             name="description"
@@ -271,39 +911,125 @@ async function uploadActionFiles() {
             required
           />
 
+          {/* RESPONSÁVEL */}
+
           <input
-            name="owner"
+            name="responsible"
             placeholder="Responsável"
-            value={form.owner}
+            value={form.responsible}
             onChange={handleChange}
-            required
           />
+
+          {/* PRAZO */}
 
           <input
             type="date"
             name="due_date"
             value={form.due_date}
             onChange={handleChange}
-            required
           />
 
-          <select name="stage" value={form.stage} onChange={handleChange}>
-            <option value="todo">A Fazer</option>
-            <option value="doing">Em andamento</option>
-            <option value="done">Concluído</option>
+          {/* STATUS */}
+
+          <select
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+          >
+            <option value="A fazer">
+              A Fazer
+            </option>
+
+            <option value="Em andamento">
+              Em andamento
+            </option>
+
+            <option value="Concluído">
+              Concluído
+            </option>
           </select>
 
-          <button className="primary" disabled={loading}>
-            {loading ? "Salvando..." : editingId ? "Atualizar" : "Adicionar"}
+          {/* SALVAR */}
+
+          <button
+            type="submit"
+            className="primary"
+            disabled={
+              loading ||
+              contractsLoading ||
+              normalizedContracts.length === 0
+            }
+          >
+            {loading
+              ? "Salvando..."
+              : editingId
+                ? "Atualizar"
+                : "Adicionar"}
           </button>
+
+          {/* CANCELAR */}
+
+          {editingId && (
+            <button
+              type="button"
+              onClick={clearForm}
+            >
+              Cancelar
+            </button>
+          )}
         </form>
 
+        {/* ERRO CONTRATOS */}
+
+        {contractsError && (
+          <div
+            style={{
+              marginTop: 10,
+              color: "#b91c1c",
+              fontSize: 14,
+            }}
+          >
+            {contractsError}
+
+            <button
+              type="button"
+              onClick={loadContracts}
+              style={{
+                marginLeft: 10,
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {/* NENHUM CONTRATO */}
+
+        {!contractsLoading &&
+          !contractsError &&
+          normalizedContracts.length === 0 && (
+            <div
+              style={{
+                marginTop: 10,
+                color: "#b45309",
+                fontSize: 14,
+              }}
+            >
+              Nenhum contrato encontrado.
+            </div>
+          )}
+
+        {/* =====================================================
+            CAMPOS COMPLEMENTARES
+        ====================================================== */}
+
         <div className="action-textareas">
+
           <textarea
             rows={3}
-            name="execution"
+            name="execution_plan"
             placeholder="Plano de execução..."
-            value={form.execution}
+            value={form.execution_plan}
             onChange={handleChange}
           />
 
@@ -316,11 +1042,20 @@ async function uploadActionFiles() {
           />
         </div>
 
-        <div className="plan-progress">
-          <div className="progress-header">
-            <span>Andamento do Plano</span>
+        {/* =====================================================
+            PROGRESSO
+        ====================================================== */}
 
-            <strong>{progress}%</strong>
+        <div className="plan-progress">
+
+          <div className="progress-header">
+            <span>
+              Andamento do Plano
+            </span>
+
+            <strong>
+              {progress}%
+            </strong>
           </div>
 
           <div className="progress-bar">
@@ -333,249 +1068,392 @@ async function uploadActionFiles() {
           </div>
         </div>
 
+        {/* =====================================================
+            TABELA
+        ====================================================== */}
+
         <div className="action-table">
 
-  <table>
+          <table>
 
-    <thead>
-      <tr>
-        <th>Mês</th>
-        <th>CR</th>
-        <th>Ação</th>
-        <th>Execução</th>
-        <th>Indicadores</th>
-        <th>Responsável</th>
-        <th>Prazo</th>
-        <th>Status</th>
-        <th>Condição</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
+            <thead>
+              <tr>
+                <th>Mês</th>
+                <th>Contrato</th>
+                <th>Ação</th>
+                <th>Execução</th>
+                <th>Indicadores</th>
+                <th>Responsável</th>
+                <th>Prazo</th>
+                <th>Status</th>
+                <th>Condição</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
 
+            <tbody>
 
-    <tbody>
+              {filteredActions.length === 0 ? (
 
-      {filteredActions.length === 0 ? (
+                <tr>
+                  <td colSpan="10">
+                    Nenhuma ação cadastrada.
+                  </td>
+                </tr>
 
-        <tr>
-          <td colSpan="10">
-            Nenhuma ação cadastrada.
-          </td>
-        </tr>
+              ) : (
 
-      ) : (
+                filteredActions.map(
+                  (item) => {
+                    const signal =
+                      getSignal(item);
 
-        filteredActions.map((item) => {
+                    return (
+                      <tr
+                        key={item.id}
+                      >
 
-          const signal = getSignal(item);
+                        {/* MÊS */}
 
-          return (
+                        <td>
+                          {item.created_at
+                            ? new Date(
+                                item.created_at
+                              ).toLocaleDateString(
+                                "pt-BR",
+                                {
+                                  month:
+                                    "2-digit",
+                                  year:
+                                    "numeric",
+                                }
+                              )
+                            : "-"}
+                        </td>
 
-            <tr key={item.id}>
+                        {/* CONTRATO */}
 
-              <td>
-                {item.created_at
-                  ? new Date(item.created_at).toLocaleDateString(
-                      "pt-BR",
-                      {
-                        month: "2-digit",
-                        year: "numeric",
-                      }
-                    )
-                  : "-"}
-              </td>
+                        <td>
+                          {getContractName(
+                            item.contract_id
+                          )}
+                        </td>
 
+                        {/* AÇÃO */}
 
-              <td>
-                {item.cr}
-              </td>
+                        <td>
+                          {item.description ||
+                            "-"}
+                        </td>
 
+                        {/* EXECUÇÃO */}
 
-              <td>
-                {item.description}
-              </td>
+                        <td>
+                          {item.execution_plan ||
+                            "-"}
+                        </td>
 
+                        {/* INDICADORES */}
 
-              <td>
-                {item.execution || "-"}
-              </td>
+                        <td>
+                          {item.indicators ||
+                            "-"}
+                        </td>
 
+                        {/* RESPONSÁVEL */}
 
-              <td>
-                {item.indicators || "-"}
-              </td>
+                        <td>
+                          {item.responsible ||
+                            "-"}
+                        </td>
 
+                        {/* PRAZO */}
 
-              <td>
-                {item.owner}
-              </td>
+                        <td>
+                          {item.due_date
+                            ? new Date(
+                                item.due_date
+                              ).toLocaleDateString(
+                                "pt-BR"
+                              )
+                            : "-"}
+                        </td>
 
+                        {/* STATUS */}
 
-              <td>
-                {new Date(item.due_date).toLocaleDateString("pt-BR")}
-              </td>
+                        <td>
+                          {item.status ||
+                            "-"}
+                        </td>
 
+                        {/* CONDIÇÃO */}
 
-              <td>
-                {item.stage === "todo"
-                  ? "A Fazer"
-                  : item.stage === "doing"
-                    ? "Em andamento"
-                    : "Concluído"}
-              </td>
+                        <td>
+                          <span
+                            className={`action-signal ${signal.className}`}
+                          >
+                            {signal.text}
+                          </span>
+                        </td>
 
+                        {/* AÇÕES */}
 
-              <td>
-                {signal.text}
-              </td>
+                        <td className="action-buttons">
 
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleEdit(item)
+                            }
+                          >
+                            Editar
+                          </button>
 
-              <td className="action-buttons">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleFiles(item)
+                            }
+                          >
+                            Arquivo
+                            {item.files?.length
+                              ? ` (${item.files.length})`
+                              : ""}
+                          </button>
 
-  <button
-    type="button"
-    onClick={() => handleEdit(item)}
-  >
-    Editar
-  </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDelete(
+                                item.id
+                              )
+                            }
+                          >
+                            Excluir
+                          </button>
 
-  <button
-    type="button"
-    onClick={() => handleFiles(item)}
-  >
-    Arquivo
-    {item.files?.length > 0 && ` (${item.files.length})`}
-  </button>
+                        </td>
+                      </tr>
+                    );
+                  }
+                )
+              )}
 
-  <button
-    type="button"
-    onClick={() => handleDelete(item.id)}
-  >
-    Excluir
-  </button>
-
-</td>
-
-
-            </tr>
-
-          );
-
-        })
-
-      )}
-
-    </tbody>
-
-  </table>
-
-</div>
-      </div>
-      {selectedAction && (
-  <div
-    className="files-modal"
-    onClick={() => setSelectedAction(null)}
-  >
-    <div
-      className="files-modal-content"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="files-header">
-        <div>
-          <h3>Arquivos da ação</h3>
-          <p>
-            <strong>Ação:</strong> {selectedAction.description}
-          </p>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="upload-area">
-        <input
-          type="file"
-          multiple
-          onChange={(e) =>
-            setSelectedFiles([...e.target.files])
+      {/* ======================================================
+          MODAL ARQUIVOS
+      ====================================================== */}
+
+      {selectedAction && (
+
+        <div
+          className="files-modal"
+          onClick={() =>
+            setSelectedAction(null)
           }
-        />
-
-        <button
-          className="upload-btn"
-          onClick={uploadActionFiles}
-          disabled={uploading}
         >
-          {uploading
-            ? "Enviando..."
-            : "Enviar arquivos"}
-        </button>
-      </div>
 
-      <div className="files-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Arquivo</th>
-              <th style={{ width: 180 }}>
-                Ações
-              </th>
-            </tr>
-          </thead>
+          <div
+            className="files-modal-content"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
 
-          <tbody>
-            {files.length === 0 ? (
-              <tr>
-                <td colSpan="2">
-                  Nenhum arquivo enviado.
-                </td>
-              </tr>
-            ) : (
-              files.map((file) => (
-                <tr key={file.id}>
-                  <td className="file-name">
-                    📄 {file.originalName}
-                  </td>
+            {/* HEADER */}
 
-                  <td>
-                    <div className="file-actions">
-                      <button
-                        className="download-btn"
-                        onClick={() =>
-                          window.open(
-                            `${api.defaults.baseURL}/actions/${selectedAction.id}/files/${file.id}`,
-                            "_blank"
-                          )
-                        }
-                      >
-                        Baixar
-                      </button>
+            <div className="files-header">
 
-                      <button
-                        className="delete-btn"
-                        onClick={() =>
-                          removeFile(file.id)
-                        }
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              <div>
 
-      <div className="files-footer">
-        <button
-          className="close-modal-btn"
-          onClick={() => setSelectedAction(null)}
-        >
-          Fechar
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                <h3>
+                  Arquivos da ação
+                </h3>
+
+                <p>
+                  <strong>
+                    Ação:
+                  </strong>{" "}
+                  {
+                    selectedAction.description
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Contrato:
+                  </strong>{" "}
+                  {getContractName(
+                    selectedAction.contract_id
+                  )}
+                </p>
+
+              </div>
+            </div>
+
+            {/* UPLOAD */}
+
+            <div className="upload-area">
+
+              <input
+                type="file"
+                multiple
+                onChange={(event) =>
+                  setSelectedFiles(
+                    Array.from(
+                      event.target.files ||
+                        []
+                    )
+                  )
+                }
+              />
+
+              <button
+                type="button"
+                className="upload-btn"
+                onClick={
+                  uploadActionFiles
+                }
+                disabled={
+                  uploading ||
+                  !selectedFiles.length
+                }
+              >
+                {uploading
+                  ? "Enviando..."
+                  : "Enviar arquivos"}
+              </button>
+
+            </div>
+
+            {/* ARQUIVOS */}
+
+            <div className="files-table">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      Arquivo
+                    </th>
+
+                    <th
+                      style={{
+                        width: 180,
+                      }}
+                    >
+                      Ações
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {files.length === 0 ? (
+
+                    <tr>
+
+                      <td colSpan="2">
+                        Nenhum arquivo
+                        enviado.
+                      </td>
+
+                    </tr>
+
+                  ) : (
+
+                    files.map(
+                      (file) => (
+                        <tr
+                          key={
+                            file.id
+                          }
+                        >
+
+                          <td className="file-name">
+
+                            📄{" "}
+
+                            {
+                              file.originalName ||
+                              file.name ||
+                              "Arquivo"
+                            }
+
+                          </td>
+
+                          <td>
+
+                            <div className="file-actions">
+
+                              <button
+                                type="button"
+                                className="download-btn"
+                                onClick={() =>
+                                  downloadFile(
+                                    file
+                                  )
+                                }
+                              >
+                                Baixar
+                              </button>
+
+                              <button
+                                type="button"
+                                className="delete-btn"
+                                onClick={() =>
+                                  removeFile(
+                                    file.id
+                                  )
+                                }
+                              >
+                                Excluir
+                              </button>
+
+                            </div>
+
+                          </td>
+
+                        </tr>
+                      )
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+            {/* FECHAR */}
+
+            <div className="files-footer">
+
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={() =>
+                  setSelectedAction(null)
+                }
+              >
+                Fechar
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
