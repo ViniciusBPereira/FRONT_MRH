@@ -193,13 +193,14 @@ export default function ActionPlan({
          */
 
         const name =
-          contract.name ??
-          contract.contract_name ??
-          contract.contractName ??
-          contract.number ??
-          contract.code ??
-          contract.description ??
-          `Contrato #${id}`;
+  contract.contract ??
+  contract.name ??
+  contract.contract_name ??
+  contract.contractName ??
+  contract.number ??
+  contract.code ??
+  contract.description ??
+  `Contrato #${id}`;
 
         return {
           id: String(id),
