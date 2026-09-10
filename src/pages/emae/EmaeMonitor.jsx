@@ -39,10 +39,10 @@ import "./EmaeMonitor.css";
 import EmaePushButton from "./EmaePushButton";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "";
+  import.meta.env.VITE_API_BASE || "";
 
 const MONITORING_URL =
-  `${API_BASE}/api/emae/sabara/monitoramento`;
+  `${API_BASE}/emae/sabara/monitoramento`;
 
 const POLLING_INTERVAL = 5000;
 
@@ -1772,6 +1772,7 @@ export default function EmaeMonitor() {
     </div>
   );
 }
+
 
 
 

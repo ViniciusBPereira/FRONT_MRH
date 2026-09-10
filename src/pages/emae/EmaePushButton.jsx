@@ -10,7 +10,7 @@ import {
 } from "react-icons/md";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "";
+  import.meta.env.VITE_API_BASE || "";
 
 function urlBase64ToUint8Array(
   base64String,
@@ -47,7 +47,7 @@ async function sendSubscription(
 ) {
   const response =
     await fetch(
-      `${API_BASE}/api/emae/push/subscribe`,
+      `${API_BASE}/emae/push/subscribe`,
       {
         method: "POST",
 
@@ -201,7 +201,7 @@ export default function EmaePushButton() {
 
       const keyResponse =
         await fetch(
-          `${API_BASE}/api/emae/push/public-key`,
+          `${API_BASE}/emae/push/public-key`,
         );
 
       if (!keyResponse.ok) {
@@ -342,3 +342,4 @@ export default function EmaePushButton() {
     </div>
   );
 }
+
