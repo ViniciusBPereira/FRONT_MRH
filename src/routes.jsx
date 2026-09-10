@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-/* ===================== PÁGINAS ===================== */
+/* ===================== PÃGINAS ===================== */
 import Login from "./pages/login/login";
 import Mrhs from "./pages/mrhs/mrhs";
 import MRHsDocumentacao from "./pages/mrhsdocumentacao/mrhsdocumentacao";
@@ -11,15 +11,16 @@ import CandidatosCadastrados from "./pages/candidatosregistrados/candidatoscadas
 import RondasCorp from "./pages/rondascorp/rondascorp";
 import RondasCorpLogin from "./pages/rondascorpLogin/rondascorplogin";
 import NPSMonitor from "./pages/nps/NPSMonitor";
+import EmaeMonitor from "./pages/emae/EmaeMonitor";
 import Radar360Dashboard from "./pages/radar360/radar360dashboard";
 
 /* ===================== LAYOUT ===================== */
 import Layout from "./components/layout";
 
-/* ===================== PROTEÇÕES ===================== */
+/* ===================== PROTEÃ‡Ã•ES ===================== */
 import ProtectedRondasRoute from "./protectedrondasroute";
 
-/* ===================== PROTEÇÃO APP PRINCIPAL ===================== */
+/* ===================== PROTEÃ‡ÃƒO APP PRINCIPAL ===================== */
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
 
@@ -40,6 +41,9 @@ export default function AppRoutes() {
 
         {/* ================= NPS MONITOR (SEM LOGIN) ================= */}
         <Route path="/nps-monitor" element={<NPSMonitor />} />
+
+        {/* ================= EMAE - SABARÁ (SEM LOGIN) ================= */}
+        <Route path="/emae/sabara" element={<EmaeMonitor />} />
 
         {/* ================= RONDAS CORP LOGIN ================= */}
         <Route path="/rondas/login" element={<RondasCorpLogin />} />
@@ -147,3 +151,4 @@ export default function AppRoutes() {
     </BrowserRouter>
   );
 }
+
