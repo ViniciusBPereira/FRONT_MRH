@@ -86,28 +86,70 @@ function normalizeText(value) {
   return String(value).trim();
 }
 
+/*
+  Retorna o primeiro valor realmente preenchido.
+
+  Diferente do operador ??, ele ignora também strings vazias.
+*/
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    const text = normalizeText(value);
+
+    if (text) {
+      return text;
+    }
+  }
+
+  return "";
+}
+
 function getBP(item) {
-  return normalizeText(
-    item?.bp ??
-      item?.business_partner ??
-      item?.businessPartner ??
-      item?.business_partner_name,
+  return firstNonEmpty(
+    item?.bp,
+    item?.business_partner,
+    item?.businessPartner,
+    item?.business_partner_name,
+    item?.contract_data?.business_partner,
+    item?.contractData?.business_partner,
+    item?.contractData?.businessPartner,
   );
 }
 
 function getCR(item) {
-  return normalizeText(
-    item?.cr ?? item?.contract ?? item?.contract_number ?? item?.contractNumber,
+  return firstNonEmpty(
+    item?.cr,
+    item?.contract,
+    item?.contract_number,
+    item?.contractNumber,
+    item?.contract_cr,
+    item?.contractCR,
+    item?.contract_data?.cr,
+    item?.contract_data?.contract,
+    item?.contractData?.cr,
+    item?.contractData?.contract,
   );
 }
 
 function getStatus(item) {
-  return normalizeText(item?.status ?? item?.stage);
+  return firstNonEmpty(item?.status, item?.stage);
 }
 
 function formatDate(value) {
   if (!value) {
     return "-";
+  }
+
+  /*
+    Evita problema de timezone quando o backend retorna:
+    2026-09-29
+
+    new Date("2026-09-29") interpreta como UTC e, dependendo
+    do fuso, pode mostrar o dia anterior.
+  */
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+    const [year, month, day] = String(value).split("-");
+
+    return `${day}/${month}/${year}`;
   }
 
   const date = new Date(value);
@@ -199,19 +241,282 @@ export default function Radar360Dashboard() {
     return () => clearInterval(interval);
   }, [carregar]);
 
-    /* ==========================================================
+  /* ==========================================================
+     MAPA DE CONTRATOS POR ID
+
+     Permite encontrar rapidamente o contrato através de
+     contract_id.
+  ========================================================== */
+
+  const contractsById = useMemo(() => {
+    const mapa = new Map();
+
+    contracts.forEach((contract) => {
+      if (contract?.id === null || contract?.id === undefined) {
+        return;
+      }
+
+      mapa.set(String(contract.id), contract);
+    });
+
+    return mapa;
+  }, [contracts]);
+
+  /* ==========================================================
+     MAPA DE VISITAS POR ID
+
+     Plano de ação normalmente está relacionado à visita
+     através de visit_id.
+  ========================================================== */
+
+  const visitsById = useMemo(() => {
+    const mapa = new Map();
+
+    visits.forEach((visit) => {
+      if (visit?.id === null || visit?.id === undefined) {
+        return;
+      }
+
+      mapa.set(String(visit.id), visit);
+    });
+
+    return mapa;
+  }, [visits]);
+
+  /* ==========================================================
+     RESOLVER CR
+
+     Tenta encontrar o CR em vários níveis:
+
+     1. diretamente no registro;
+     2. pela visita relacionada;
+     3. pelo contrato da visita;
+     4. pelo contract_id do próprio registro.
+  ========================================================== */
+
+  const resolveCR = useCallback(
+    (item) => {
+      if (!item) {
+        return "";
+      }
+
+      // ======================================================
+      // 1. CR DIRETAMENTE NO REGISTRO
+      // ======================================================
+
+      const directCR = getCR(item);
+
+      if (directCR) {
+        return directCR;
+      }
+
+      // ======================================================
+      // 2. PROCURAR ATRAVÉS DA VISITA
+      // ======================================================
+
+      const visitId = firstNonEmpty(
+        item?.visit_id,
+        item?.visitId,
+        item?.visit?.id,
+      );
+
+      if (visitId) {
+        const visit = visitsById.get(String(visitId));
+
+        if (visit) {
+          // CR já retornado pela própria visita
+          const visitCR = getCR(visit);
+
+          if (visitCR) {
+            return visitCR;
+          }
+
+          // ==================================================
+          // 3. VISITA -> CONTRACT_ID -> CONTRATO
+          // ==================================================
+
+          const visitContractId = firstNonEmpty(
+            visit?.contract_id,
+            visit?.contractId,
+            visit?.contract_data?.id,
+            visit?.contractData?.id,
+          );
+
+          if (visitContractId) {
+            const contract = contractsById.get(String(visitContractId));
+
+            const contractCR = getCR(contract);
+
+            if (contractCR) {
+              return contractCR;
+            }
+          }
+        }
+      }
+
+      // ======================================================
+      // 4. CONTRACT_ID DIRETAMENTE NO REGISTRO
+      // ======================================================
+
+      const contractId = firstNonEmpty(
+        item?.contract_id,
+        item?.contractId,
+        item?.contract_data?.id,
+        item?.contractData?.id,
+      );
+
+      if (contractId) {
+        const contract = contractsById.get(String(contractId));
+
+        const contractCR = getCR(contract);
+
+        if (contractCR) {
+          return contractCR;
+        }
+      }
+
+      return "";
+    },
+    [visitsById, contractsById],
+  );
+
+  /* ==========================================================
+     RESOLVER BP
+
+     Mesma lógica do CR, mas para Business Partner.
+  ========================================================== */
+
+  const resolveBP = useCallback(
+    (item) => {
+      if (!item) {
+        return "";
+      }
+
+      const directBP = getBP(item);
+
+      if (directBP) {
+        return directBP;
+      }
+
+      const visitId = firstNonEmpty(
+        item?.visit_id,
+        item?.visitId,
+        item?.visit?.id,
+      );
+
+      if (visitId) {
+        const visit = visitsById.get(String(visitId));
+
+        if (visit) {
+          const visitBP = getBP(visit);
+
+          if (visitBP) {
+            return visitBP;
+          }
+
+          const visitContractId = firstNonEmpty(
+            visit?.contract_id,
+            visit?.contractId,
+          );
+
+          if (visitContractId) {
+            const contract = contractsById.get(String(visitContractId));
+
+            const contractBP = getBP(contract);
+
+            if (contractBP) {
+              return contractBP;
+            }
+          }
+        }
+      }
+
+      const contractId = firstNonEmpty(
+        item?.contract_id,
+        item?.contractId,
+      );
+
+      if (contractId) {
+        const contract = contractsById.get(String(contractId));
+
+        const contractBP = getBP(contract);
+
+        if (contractBP) {
+          return contractBP;
+        }
+      }
+
+      return "";
+    },
+    [visitsById, contractsById],
+  );
+
+  /* ==========================================================
+     ENRIQUECER VISITAS
+
+     Mantém o formato original, mas garante CR e BP sempre
+     que for possível encontrá-los.
+  ========================================================== */
+
+  const visitsResolved = useMemo(() => {
+    return visits.map((visit) => ({
+      ...visit,
+      cr: resolveCR(visit),
+      bp: resolveBP(visit),
+    }));
+  }, [visits, resolveCR, resolveBP]);
+
+  /* ==========================================================
+     ENRIQUECER ACOMPANHAMENTOS
+  ========================================================== */
+
+  const trackingResolved = useMemo(() => {
+    return tracking.map((item) => ({
+      ...item,
+      cr: resolveCR(item),
+      bp: resolveBP(item),
+    }));
+  }, [tracking, resolveCR, resolveBP]);
+
+  /* ==========================================================
+     ENRIQUECER PLANOS DE AÇÃO
+
+     ESTA É UMA DAS PRINCIPAIS CORREÇÕES.
+  ========================================================== */
+
+  const actionPlansResolved = useMemo(() => {
+    return actionPlans.map((action) => ({
+      ...action,
+      cr: resolveCR(action),
+      bp: resolveBP(action),
+    }));
+  }, [actionPlans, resolveCR, resolveBP]);
+
+  /* ==========================================================
+     ENRIQUECER AÇÕES PONTUAIS
+  ========================================================== */
+
+  const punctualActionsResolved = useMemo(() => {
+    return punctualActions.map((action) => ({
+      ...action,
+      cr: resolveCR(action),
+      bp: resolveBP(action),
+    }));
+  }, [punctualActions, resolveCR, resolveBP]);
+
+  /* ==========================================================
      BASE ÚNICA DOS CONTRATOS
 
-     O filtro passa a usar /contracts como fonte principal.
-     Isso evita depender de existir uma visita para um contrato
-     aparecer no filtro.
+     /contracts é a fonte principal.
+
+     Visitas entram como fallback.
   ========================================================== */
 
   const contratosBase = useMemo(() => {
     const mapa = new Map();
 
     // ========================================================
-    // 1. CONTRATOS — fonte principal
+    // 1. CONTRATOS
     // ========================================================
 
     contracts.forEach((contract) => {
@@ -230,51 +535,68 @@ export default function Radar360Dashboard() {
     });
 
     // ========================================================
-    // 2. VISITAS — fallback
-    //
-    // Caso algum CR exista nas visitas mas ainda não esteja
-    // corretamente presente em /contracts, adicionamos.
+    // 2. VISITAS COMO FALLBACK
     // ========================================================
 
-    visits.forEach((visit) => {
-  const cr = getCR(visit);
+    visitsResolved.forEach((visit) => {
+      const cr = getCR(visit);
 
-  if (!cr) {
-    return;
-  }
+      if (!cr) {
+        return;
+      }
 
-  const bp = getBP(visit);
-  const existente = mapa.get(cr);
+      const bp = getBP(visit);
+      const existente = mapa.get(cr);
 
-  // Se o contrato ainda não existe, cria pelo registro da visita
-  if (!existente) {
-    mapa.set(cr, {
-      cr,
-      bp,
-      original: null,
+      if (!existente) {
+        mapa.set(cr, {
+          cr,
+          bp,
+          original: null,
+        });
+
+        return;
+      }
+
+      if (!existente.bp && bp) {
+        mapa.set(cr, {
+          ...existente,
+          bp,
+        });
+      }
     });
-
-    return;
-  }
-
-  // Se o contrato existe, mas não tem BP,
-  // aproveita o BP encontrado na visita
-  if (!existente.bp && bp) {
-    mapa.set(cr, {
-      ...existente,
-      bp,
-    });
-  }
-});
 
     // ========================================================
-    // 3. RESULTADO FINAL
+    // 3. PLANOS DE AÇÃO COMO FALLBACK
+    // ========================================================
+
+    actionPlansResolved.forEach((action) => {
+      const cr = getCR(action);
+
+      if (!cr) {
+        return;
+      }
+
+      const existente = mapa.get(cr);
+
+      if (!existente) {
+        mapa.set(cr, {
+          cr,
+          bp: getBP(action),
+          original: null,
+        });
+      }
+    });
+
+    // ========================================================
+    // RESULTADO
     // ========================================================
 
     return Array.from(mapa.values()).sort((a, b) =>
       a.cr.localeCompare(b.cr, "pt-BR"),
     );
-  }, [contracts, visits]);
+  }, [contracts, visitsResolved, actionPlansResolved]);
+
   /* ==========================================================
      BPs
   ========================================================== */
@@ -287,9 +609,6 @@ export default function Radar360Dashboard() {
 
   /* ==========================================================
      CONTRATOS DISPONÍVEIS
-     
-     Se BP estiver selecionado:
-       mostra somente CRs daquele BP.
   ========================================================== */
 
   const contratosDisponiveis = useMemo(() => {
@@ -301,7 +620,7 @@ export default function Radar360Dashboard() {
   }, [contratosBase, bpSelecionado]);
 
   /* ==========================================================
-     GARANTE QUE O CR NÃO FIQUE INVÁLIDO AO TROCAR O BP
+     GARANTE QUE CR NÃO FIQUE INVÁLIDO AO TROCAR BP
   ========================================================== */
 
   useEffect(() => {
@@ -321,10 +640,6 @@ export default function Radar360Dashboard() {
     (item) => {
       const itemCR = getCR(item);
 
-      /*
-        Se não houver CR no registro, ele não consegue ser
-        associado a um BP de forma segura.
-      */
       if (!itemCR) {
         return !contratoSelecionado && !bpSelecionado;
       }
@@ -345,10 +660,6 @@ export default function Radar360Dashboard() {
         return contract.bp === bpSelecionado;
       }
 
-      /*
-        Fallback para registros que não foram encontrados
-        no endpoint /contracts.
-      */
       return getBP(item) === bpSelecionado;
     },
     [bpSelecionado, contratoSelecionado, contratosBase],
@@ -359,23 +670,23 @@ export default function Radar360Dashboard() {
   ========================================================== */
 
   const filteredVisits = useMemo(
-    () => visits.filter(matchesFilter),
-    [visits, matchesFilter],
+    () => visitsResolved.filter(matchesFilter),
+    [visitsResolved, matchesFilter],
   );
 
   const filteredTracking = useMemo(
-    () => tracking.filter(matchesFilter),
-    [tracking, matchesFilter],
+    () => trackingResolved.filter(matchesFilter),
+    [trackingResolved, matchesFilter],
   );
 
   const filteredActionPlans = useMemo(
-    () => actionPlans.filter(matchesFilter),
-    [actionPlans, matchesFilter],
+    () => actionPlansResolved.filter(matchesFilter),
+    [actionPlansResolved, matchesFilter],
   );
 
   const filteredPunctualActions = useMemo(
-    () => punctualActions.filter(matchesFilter),
-    [punctualActions, matchesFilter],
+    () => punctualActionsResolved.filter(matchesFilter),
+    [punctualActionsResolved, matchesFilter],
   );
 
   /* ==========================================================
@@ -412,7 +723,13 @@ export default function Radar360Dashboard() {
     );
 
     const totalHeadcount = filteredVisits.reduce(
-      (total, visit) => total + Number(visit.headcount || 0),
+      (total, visit) =>
+        total +
+        Number(
+          visit.headcount ??
+            visit.contract_headcount ??
+            0,
+        ),
       0,
     );
 
@@ -442,7 +759,8 @@ export default function Radar360Dashboard() {
 
     const plannedPlans = filteredActionPlans.filter(
       (item) =>
-        getStatus(item) === "A fazer" || getStatus(item) === "Planejado",
+        getStatus(item) === "A fazer" ||
+        getStatus(item) === "Planejado",
     ).length;
 
     const completedPunctual = filteredPunctualActions.filter(
@@ -455,7 +773,8 @@ export default function Radar360Dashboard() {
 
     const pendingPunctual = filteredPunctualActions.filter(
       (item) =>
-        getStatus(item) === "A fazer" || getStatus(item) === "Planejado",
+        getStatus(item) === "A fazer" ||
+        getStatus(item) === "Planejado",
     ).length;
 
     return {
@@ -575,7 +894,9 @@ export default function Radar360Dashboard() {
 
     filteredPunctualActions.forEach((action) => {
       const date =
-        action.completion_date || action.action_date || action.due_date;
+        action.completion_date ||
+        action.action_date ||
+        action.due_date;
 
       if (!date) {
         return;
@@ -593,7 +914,11 @@ export default function Radar360Dashboard() {
     return events
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 10);
-  }, [filteredVisits, filteredActionPlans, filteredPunctualActions]);
+  }, [
+    filteredVisits,
+    filteredActionPlans,
+    filteredPunctualActions,
+  ]);
 
   /* ==========================================================
      KPIs
@@ -668,19 +993,6 @@ export default function Radar360Dashboard() {
     setActiveTab("visit");
   }, []);
 
-  /* ==========================================================
-     TROCA DE BP
-     
-     Importante:
-     NÃO altera activeTab.
-     
-     Portanto:
-       usuário está em Acompanhamento
-       troca BP
-       continua em Acompanhamento
-       apenas os dados mudam.
-  ========================================================== */
-
   const handleBPChange = (event) => {
     setBpSelecionado(event.target.value);
     setContratoSelecionado("");
@@ -693,8 +1005,10 @@ export default function Radar360Dashboard() {
   const moduleProps = {
     visits: filteredVisits,
     tracking: filteredTracking,
+
     actions: filteredActionPlans,
     actionPlans: filteredActionPlans,
+
     punctualActions: filteredPunctualActions,
 
     bpSelecionado,
@@ -749,7 +1063,9 @@ export default function Radar360Dashboard() {
 
             <select
               value={contratoSelecionado}
-              onChange={(event) => setContratoSelecionado(event.target.value)}
+              onChange={(event) =>
+                setContratoSelecionado(event.target.value)
+              }
               disabled={loading || contratosDisponiveis.length === 0}
             >
               <option value="">Todos os CRs</option>
@@ -782,9 +1098,13 @@ export default function Radar360Dashboard() {
       ====================================================== */}
 
       <div className="radar-status">
-        <span className={loading ? "status-dot loading" : "status-dot"} />
+        <span
+          className={loading ? "status-dot loading" : "status-dot"}
+        />
 
-        <span>{loading ? "Atualizando dados..." : "Dados atualizados"}</span>
+        <span>
+          {loading ? "Atualizando dados..." : "Dados atualizados"}
+        </span>
 
         <span className="status-separator">•</span>
 
@@ -856,25 +1176,36 @@ export default function Radar360Dashboard() {
 
       {activeTab === "dashboard" && (
         <main className="dashboard-content">
-          {/* KPIs */}
+          {/* ==================================================
+              KPIs
+          ================================================== */}
 
           <section className="kpi-grid">
             {kpis.map((kpi) => (
-              <article key={kpi.label} className={`kpi-card ${kpi.type}`}>
+              <article
+                key={kpi.label}
+                className={`kpi-card ${kpi.type}`}
+              >
                 <div className="kpi-card-top">
                   <span>{kpi.label}</span>
                 </div>
 
-                <strong>{loading ? "—" : formatNumber(kpi.value)}</strong>
+                <strong>
+                  {loading ? "—" : formatNumber(kpi.value)}
+                </strong>
 
                 <small>{kpi.helper}</small>
               </article>
             ))}
           </section>
 
-          {/* RESUMO OPERACIONAL */}
+          {/* ==================================================
+              RESUMO OPERACIONAL
+          ================================================== */}
 
           <section className="dashboard-grid">
+            {/* RISCO */}
+
             <article className="panel">
               <div className="panel-header">
                 <div>
@@ -883,12 +1214,17 @@ export default function Radar360Dashboard() {
                   <h2>Saúde dos contratos</h2>
                 </div>
 
-                <span className="panel-total">{summary.visits} visitas</span>
+                <span className="panel-total">
+                  {summary.visits} visitas
+                </span>
               </div>
 
               <div className="classification-list">
                 {classificationData.map((item) => (
-                  <div className="classification-row" key={item.name}>
+                  <div
+                    className="classification-row"
+                    key={item.name}
+                  >
                     <div className="classification-label">
                       <span
                         className={`classification-dot ${item.name
@@ -909,13 +1245,17 @@ export default function Radar360Dashboard() {
 
                     <strong>{item.value}</strong>
 
-                    <small>{Math.round(item.percentage)}%</small>
+                    <small>
+                      {Math.round(item.percentage)}%
+                    </small>
                   </div>
                 ))}
               </div>
             </article>
 
-            {/* PLANOS */}
+            {/* ==================================================
+                PRÓXIMOS PLANOS
+            ================================================== */}
 
             <article className="panel">
               <div className="panel-header">
@@ -925,7 +1265,9 @@ export default function Radar360Dashboard() {
                   <h2>Próximos planos</h2>
                 </div>
 
-                <span className="panel-total">{summary.actionPlans} total</span>
+                <span className="panel-total">
+                  {summary.actionPlans} total
+                </span>
               </div>
 
               {upcomingPlans.length === 0 ? (
@@ -938,41 +1280,59 @@ export default function Radar360Dashboard() {
                 </div>
               ) : (
                 <div className="action-list">
-                  {upcomingPlans.map((action) => (
-                    <div className="action-item" key={action.id}>
-                      <div className="action-main">
-                        <strong>
-                          {getCR(action) || "Contrato não informado"}
-                        </strong>
+                  {upcomingPlans.map((action) => {
+                    const cr = getCR(action);
 
-                        <span>{action.description || "Sem descrição"}</span>
+                    return (
+                      <div
+                        className="action-item"
+                        key={action.id}
+                      >
+                        <div className="action-main">
+                          <strong>
+                            {cr || "Contrato não informado"}
+                          </strong>
+
+                          <span>
+                            {action.description ||
+                              action.plan ||
+                              action.execution ||
+                              "Sem descrição"}
+                          </span>
+                        </div>
+
+                        <div className="action-meta">
+                          <span
+                            className={`status-badge ${getStatus(action)
+                              .toLowerCase()
+                              .replaceAll(" ", "-")}`}
+                          >
+                            {getStatus(action) || "Sem status"}
+                          </span>
+
+                          <small>
+                            {formatDate(action.due_date)}
+                          </small>
+                        </div>
                       </div>
-
-                      <div className="action-meta">
-                        <span
-                          className={`status-badge ${getStatus(action)
-                            .toLowerCase()
-                            .replaceAll(" ", "-")}`}
-                        >
-                          {getStatus(action) || "Sem status"}
-                        </span>
-
-                        <small>{formatDate(action.due_date)}</small>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </article>
           </section>
 
-          {/* SEGUNDO BLOCO */}
+          {/* ==================================================
+              SEGUNDO BLOCO
+          ================================================== */}
 
           <section className="dashboard-grid">
             <article className="panel">
               <div className="panel-header">
                 <div>
-                  <span className="panel-kicker">ACOMPANHAMENTO</span>
+                  <span className="panel-kicker">
+                    ACOMPANHAMENTO
+                  </span>
 
                   <h2>Status das ações</h2>
                 </div>
@@ -1008,7 +1368,9 @@ export default function Radar360Dashboard() {
             <article className="panel">
               <div className="panel-header">
                 <div>
-                  <span className="panel-kicker">AÇÃO PONTUAL</span>
+                  <span className="panel-kicker">
+                    AÇÃO PONTUAL
+                  </span>
 
                   <h2>Indicadores</h2>
                 </div>
@@ -1018,66 +1380,92 @@ export default function Radar360Dashboard() {
                 <div className="action-summary-card">
                   <span>Total</span>
 
-                  <strong>{summary.punctualActions}</strong>
+                  <strong>
+                    {summary.punctualActions}
+                  </strong>
                 </div>
 
                 <div className="action-summary-card warning">
                   <span>Em execução</span>
 
-                  <strong>{summary.executingPunctual}</strong>
+                  <strong>
+                    {summary.executingPunctual}
+                  </strong>
                 </div>
 
                 <div className="action-summary-card">
                   <span>Pendentes</span>
 
-                  <strong>{summary.pendingPunctual}</strong>
+                  <strong>
+                    {summary.pendingPunctual}
+                  </strong>
                 </div>
 
                 <div className="action-summary-card success">
                   <span>Concluídas</span>
 
-                  <strong>{summary.completedPunctual}</strong>
+                  <strong>
+                    {summary.completedPunctual}
+                  </strong>
                 </div>
               </div>
             </article>
           </section>
 
-          {/* LINHA DO TEMPO */}
+          {/* ==================================================
+              LINHA DO TEMPO
+          ================================================== */}
 
           <section className="panel timeline-panel">
             <div className="panel-header">
               <div>
-                <span className="panel-kicker">HISTÓRICO</span>
+                <span className="panel-kicker">
+                  HISTÓRICO
+                </span>
 
                 <h2>Atividade recente</h2>
               </div>
 
-              <span className="panel-total">{timeline.length} eventos</span>
+              <span className="panel-total">
+                {timeline.length} eventos
+              </span>
             </div>
 
             {timeline.length === 0 ? (
               <div className="empty-state">
                 <strong>Nenhuma atividade</strong>
 
-                <span>Não existem eventos para os filtros selecionados.</span>
+                <span>
+                  Não existem eventos para os filtros selecionados.
+                </span>
               </div>
             ) : (
               <div className="timeline">
                 {timeline.map((event) => (
-                  <div className="timeline-item" key={event.id}>
+                  <div
+                    className="timeline-item"
+                    key={event.id}
+                  >
                     <div className="timeline-marker" />
 
                     <div className="timeline-content">
                       <div>
                         <strong>{event.type}</strong>
 
-                        <span>{event.cr || "Contrato não informado"}</span>
+                        <span>
+                          {event.cr ||
+                            "Contrato não informado"}
+                        </span>
                       </div>
 
                       <div className="timeline-right">
-                        <small>{formatDate(event.date)}</small>
+                        <small>
+                          {formatDate(event.date)}
+                        </small>
 
-                        <span className="status-badge">{event.status}</span>
+                        <span className="status-badge">
+                          {event.status}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1087,23 +1475,21 @@ export default function Radar360Dashboard() {
           </section>
         </main>
       )}
+
       {/* ======================================================
           DASHBOARD BI
       ====================================================== */}
 
-      {activeTab === "bi" && (
-        <Dashboard />
-      )}
+      {activeTab === "bi" && <Dashboard />}
 
-            {/* ======================================================
+      {/* ======================================================
           CADASTRO DE CONTRATO
       ====================================================== */}
 
       {activeTab === "contract" && (
-        <Contrato
-          onReload={carregar}
-        />
+        <Contrato onReload={carregar} />
       )}
+
       {/* ======================================================
           NOVA / EDITAR VISITA
       ====================================================== */}
@@ -1121,20 +1507,27 @@ export default function Radar360Dashboard() {
       ====================================================== */}
 
       {activeTab === "tracking" && (
-        <Acompanhamento {...moduleProps} onEditVisit={editarVisita} />
+        <Acompanhamento
+          {...moduleProps}
+          onEditVisit={editarVisita}
+        />
       )}
 
       {/* ======================================================
           PLANO DE AÇÃO
       ====================================================== */}
 
-      {activeTab === "actions" && <PlanodeAcao {...moduleProps} />}
+      {activeTab === "actions" && (
+        <PlanodeAcao {...moduleProps} />
+      )}
 
       {/* ======================================================
           AÇÃO PONTUAL
       ====================================================== */}
 
-      {activeTab === "punctual" && <AcaoPontual {...moduleProps} />}
+      {activeTab === "punctual" && (
+        <AcaoPontual {...moduleProps} />
+      )}
     </div>
   );
 }
