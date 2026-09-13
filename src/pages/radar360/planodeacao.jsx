@@ -7,17 +7,80 @@ export default function ActionPlan({
   contracts: contractsProp = [],
   contratoSelecionado = "",
 }) {
-  // ============================================================
-  // AUTH
-  // ============================================================
+  /* ============================================================
+     AUTH
+  ============================================================ */
 
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
   });
 
-  // ============================================================
-  // FORM
-  // ============================================================
+  /* ============================================================
+     HELPERS
+  ============================================================ */
+
+  function normalizeText(value) {
+    if (value === null || value === undefined) {
+      return "";
+    }
+
+    return String(value).trim();
+  }
+
+  function firstNonEmpty(...values) {
+    for (const value of values) {
+      const text = normalizeText(value);
+
+      if (text) {
+        return text;
+      }
+    }
+
+    return "";
+  }
+
+  function formatDate(value) {
+    if (!value) {
+      return "-";
+    }
+
+    const raw = String(value);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [year, month, day] = raw.split("-");
+
+      return `${day}/${month}/${year}`;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+
+    return date.toLocaleDateString("pt-BR");
+  }
+
+  function formatMonth(value) {
+    if (!value) {
+      return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+
+    return date.toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  /* ============================================================
+     FORM
+  ============================================================ */
 
   const emptyForm = {
     contract_id: "",
@@ -30,40 +93,47 @@ export default function ActionPlan({
   };
 
   const [form, setForm] = useState(emptyForm);
+
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // ============================================================
-  // AÇÕES
-  // ============================================================
+  /* ============================================================
+     AÇÕES
+  ============================================================ */
 
   const [localActions, setLocalActions] = useState(
-    Array.isArray(actionsProp) ? actionsProp : []
+    Array.isArray(actionsProp) ? actionsProp : [],
   );
 
-  // ============================================================
-  // CONTRATOS
-  // ============================================================
+  /* ============================================================
+     CONTRATOS
+  ============================================================ */
 
   const [contracts, setContracts] = useState(
-    Array.isArray(contractsProp) ? contractsProp : []
+    Array.isArray(contractsProp) ? contractsProp : [],
   );
 
   const [contractsLoading, setContractsLoading] = useState(false);
   const [contractsError, setContractsError] = useState("");
 
-  // ============================================================
-  // ARQUIVOS
-  // ============================================================
+  /* ============================================================
+     ARQUIVOS
+  ============================================================ */
 
   const [selectedAction, setSelectedAction] = useState(null);
   const [files, setFiles] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  // ============================================================
-  // SINCRONIZAR AÇÕES VINDAS DO PAI
-  // ============================================================
+  /* ============================================================
+     SINCRONIZAR AÇÕES VINDAS DO PAI
+
+     IMPORTANTE:
+     Radar360Dashboard já envia filteredActionPlans.
+
+     Então NÃO devemos tentar comparar contratoSelecionado
+     diretamente com contract_id novamente.
+  ============================================================ */
 
   useEffect(() => {
     if (Array.isArray(actionsProp)) {
@@ -71,47 +141,20 @@ export default function ActionPlan({
     }
   }, [actionsProp]);
 
-  // ============================================================
-  // BUSCAR CONTRATOS DIRETAMENTE DA API
-  // ============================================================
+  /* ============================================================
+     CARREGAR CONTRATOS
+  ============================================================ */
 
   async function loadContracts() {
     try {
       setContractsLoading(true);
       setContractsError("");
 
-      console.log("[ACTION FRONT] Buscando contratos em GET /contracts");
-
       const response = await api.get("/contracts", {
         headers: authHeader(),
       });
 
-      console.log(
-        "[ACTION FRONT] Resposta /contracts:",
-        response.data
-      );
-
-      /*
-       * Aceita os formatos:
-       *
-       * [
-       *   { id: 1, name: "Contrato 001" }
-       * ]
-       *
-       * ou:
-       *
-       * {
-       *   contracts: [...]
-       * }
-       *
-       * ou:
-       *
-       * {
-       *   data: [...]
-       * }
-       */
-
-      let data = response.data;
+      const data = response.data;
 
       if (Array.isArray(data)) {
         setContracts(data);
@@ -128,25 +171,22 @@ export default function ActionPlan({
         return;
       }
 
-      console.warn(
-        "[ACTION FRONT] /contracts não retornou uma lista:",
-        data
-      );
-
       setContracts([]);
+
       setContractsError(
-        "A API de contratos não retornou uma lista válida."
+        "A API de contratos não retornou uma lista válida.",
       );
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro ao carregar contratos:",
-        error.response?.data || error
+        error.response?.data || error,
       );
 
       setContracts([]);
+
       setContractsError(
         error.response?.data?.message ||
-          "Não foi possível carregar os contratos."
+          "Não foi possível carregar os contratos.",
       );
     } finally {
       setContractsLoading(false);
@@ -157,9 +197,9 @@ export default function ActionPlan({
     loadContracts();
   }, []);
 
-  // ============================================================
-  // NORMALIZAR CONTRATOS
-  // ============================================================
+  /* ============================================================
+     NORMALIZAR CONTRATOS
+  ============================================================ */
 
   const normalizedContracts = useMemo(() => {
     if (!Array.isArray(contracts)) {
@@ -185,26 +225,21 @@ export default function ActionPlan({
           return null;
         }
 
-        /*
-         * Aqui priorizamos os campos mais comuns.
-         *
-         * Se sua API possui "name", ele será usado.
-         * Se não possui, tentamos os outros.
-         */
-
-        const name =
-  contract.contract ??
-  contract.name ??
-  contract.contract_name ??
-  contract.contractName ??
-  contract.number ??
-  contract.code ??
-  contract.description ??
-  `Contrato #${id}`;
+        const name = firstNonEmpty(
+          contract.contract,
+          contract.cr,
+          contract.name,
+          contract.contract_name,
+          contract.contractName,
+          contract.number,
+          contract.code,
+          contract.description,
+          `Contrato #${id}`,
+        );
 
         return {
           id: String(id),
-          name: String(name),
+          name,
           original: contract,
         };
       })
@@ -213,32 +248,89 @@ export default function ActionPlan({
         a.name.localeCompare(b.name, "pt-BR", {
           numeric: true,
           sensitivity: "base",
-        })
+        }),
       );
   }, [contracts]);
 
-  // ============================================================
-  // INICIALIZAR CONTRATO SELECIONADO
-  // ============================================================
+  /* ============================================================
+     CONTRATO ESCOLHIDO NO FILTRO GLOBAL
+
+     contratoSelecionado contém o CR/nome, não o UUID.
+     Aqui transformamos o CR no ID real do contrato.
+  ============================================================ */
+
+  const selectedContract = useMemo(() => {
+    if (!contratoSelecionado) {
+      return null;
+    }
+
+    const selected = normalizeText(contratoSelecionado);
+
+    return (
+      normalizedContracts.find((contract) => {
+        const original = contract.original;
+
+        const candidates = [
+          contract.id,
+          contract.name,
+          original?.cr,
+          original?.contract,
+          original?.contract_number,
+          original?.contractNumber,
+          original?.name,
+          original?.code,
+        ]
+          .map(normalizeText)
+          .filter(Boolean);
+
+        return candidates.includes(selected);
+      }) || null
+    );
+  }, [normalizedContracts, contratoSelecionado]);
+
+  /* ============================================================
+     SINCRONIZAR FORMULÁRIO COM O FILTRO GLOBAL
+  ============================================================ */
 
   useEffect(() => {
     if (editingId) {
       return;
     }
 
-    if (contratoSelecionado !== undefined) {
+    /*
+      Agora usamos o ID real encontrado em /contracts.
+      Não colocamos o texto do CR dentro de contract_id.
+    */
+    if (selectedContract?.id) {
       setForm((old) => ({
         ...old,
-        contract_id: contratoSelecionado
-          ? String(contratoSelecionado)
-          : old.contract_id,
+        contract_id: selectedContract.id,
       }));
-    }
-  }, [contratoSelecionado, editingId]);
 
-  // ============================================================
-  // AÇÕES FILTRADAS
-  // ============================================================
+      return;
+    }
+
+    /*
+      Se o filtro foi limpo, não apagamos uma seleção manual
+      que o usuário já tenha feito no formulário.
+    */
+    if (!contratoSelecionado) {
+      return;
+    }
+  }, [
+    contratoSelecionado,
+    selectedContract,
+    editingId,
+  ]);
+
+  /* ============================================================
+     AÇÕES EXIBIDAS
+
+     O PAI JÁ ENTREGA AS AÇÕES FILTRADAS.
+
+     Mantemos apenas uma validação de fallback caso o componente
+     seja usado isoladamente no futuro.
+  ============================================================ */
 
   const filteredActions = useMemo(() => {
     if (!Array.isArray(localActions)) {
@@ -249,34 +341,101 @@ export default function ActionPlan({
       return localActions;
     }
 
-    return localActions.filter(
-      (item) =>
-        String(item.contract_id) ===
-        String(contratoSelecionado)
-    );
-  }, [localActions, contratoSelecionado]);
-
-  // ============================================================
-  // PROGRESSO
-  // ============================================================
-
-  const progress = useMemo(() => {
-    if (!filteredActions.length) {
-      return 0;
+    /*
+      Caso o dashboard já tenha filtrado corretamente,
+      não precisamos remover mais nada.
+    */
+    if (!selectedContract) {
+      return localActions;
     }
 
-    const done = filteredActions.filter(
-      (action) => action.status === "Concluído"
+    const selectedId = String(selectedContract.id);
+    const selectedCR = normalizeText(contratoSelecionado);
+
+    return localActions.filter((item) => {
+      const itemContractId = normalizeText(
+        item?.contract_id ?? item?.contractId,
+      );
+
+      const itemCR = firstNonEmpty(
+        item?.cr,
+        item?.contract,
+        item?.contract_number,
+        item?.contractNumber,
+      );
+
+      /*
+        Aceitamos tanto vínculo por UUID quanto pelo CR.
+      */
+      return (
+        itemContractId === selectedId ||
+        itemCR === selectedCR
+      );
+    });
+  }, [
+    localActions,
+    contratoSelecionado,
+    selectedContract,
+  ]);
+
+  /* ============================================================
+     ESTATÍSTICAS
+  ============================================================ */
+
+  const stats = useMemo(() => {
+    const total = filteredActions.length;
+
+    const completed = filteredActions.filter(
+      (action) => action.status === "Concluído",
     ).length;
 
-    return Math.round(
-      (done / filteredActions.length) * 100
-    );
+    const running = filteredActions.filter(
+      (action) => action.status === "Em andamento",
+    ).length;
+
+    const pending = filteredActions.filter(
+      (action) =>
+        action.status === "A fazer" ||
+        action.status === "Planejado",
+    ).length;
+
+    const delayed = filteredActions.filter((action) => {
+      if (
+        action.status === "Concluído" ||
+        !action.due_date
+      ) {
+        return false;
+      }
+
+      const due = new Date(
+        `${String(action.due_date).slice(0, 10)}T00:00:00`,
+      );
+
+      const today = new Date();
+
+      today.setHours(0, 0, 0, 0);
+
+      return due < today;
+    }).length;
+
+    const progress =
+      total > 0
+        ? Math.round((completed / total) * 100)
+        : 0;
+
+    return {
+      total,
+      completed,
+      running,
+      pending,
+      delayed,
+      progress,
+    };
   }, [filteredActions]);
 
-  // ============================================================
-  // ALTERAR FORM
-  // ============================================================
+  /* ============================================================
+     ALTERAR FORM
+  ============================================================ */
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -287,24 +446,24 @@ export default function ActionPlan({
     }));
   }
 
-  // ============================================================
-  // LIMPAR FORMULÁRIO
-  // ============================================================
+  /* ============================================================
+     LIMPAR FORM
+  ============================================================ */
 
   function clearForm() {
     setEditingId(null);
 
     setForm({
       ...emptyForm,
-      contract_id: contratoSelecionado
-        ? String(contratoSelecionado)
-        : "",
+
+      contract_id:
+        selectedContract?.id || "",
     });
   }
 
-  // ============================================================
-  // SALVAR
-  // ============================================================
+  /* ============================================================
+     SALVAR
+  ============================================================ */
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -324,7 +483,9 @@ export default function ActionPlan({
 
       const payload = {
         contract_id: form.contract_id,
-        description: form.description.trim(),
+
+        description:
+          form.description.trim(),
 
         execution_plan:
           form.execution_plan.trim() || null,
@@ -342,11 +503,6 @@ export default function ActionPlan({
           form.status || "A fazer",
       };
 
-      console.log(
-        "[ACTION FRONT] Payload:",
-        payload
-      );
-
       let response;
 
       if (editingId) {
@@ -355,7 +511,7 @@ export default function ActionPlan({
           payload,
           {
             headers: authHeader(),
-          }
+          },
         );
       } else {
         response = await api.post(
@@ -363,31 +519,26 @@ export default function ActionPlan({
           payload,
           {
             headers: authHeader(),
-          }
+          },
         );
       }
 
       const savedAction = response.data;
-
-      console.log(
-        "[ACTION FRONT] Resposta:",
-        savedAction
-      );
 
       if (editingId) {
         setLocalActions((old) =>
           old.map((item) =>
             String(item.id) === String(editingId)
               ? savedAction
-              : item
-          )
+              : item,
+          ),
         );
 
         alert("Plano atualizado com sucesso.");
       } else {
         setLocalActions((old) => [
-          ...old,
           savedAction,
+          ...old,
         ]);
 
         alert("Plano criado com sucesso.");
@@ -397,32 +548,22 @@ export default function ActionPlan({
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro ao salvar plano:",
-        error
-      );
-
-      console.error(
-        "[ACTION FRONT] Status:",
-        error.response?.status
-      );
-
-      console.error(
-        "[ACTION FRONT] Response:",
-        error.response?.data
+        error,
       );
 
       alert(
         error.response?.data?.message ||
           error.response?.data?.detail ||
-          "Erro ao salvar plano de ação."
+          "Erro ao salvar plano de ação.",
       );
     } finally {
       setLoading(false);
     }
   }
 
-  // ============================================================
-  // EDITAR
-  // ============================================================
+  /* ============================================================
+     EDITAR
+  ============================================================ */
 
   function handleEdit(action) {
     setEditingId(action.id);
@@ -461,13 +602,13 @@ export default function ActionPlan({
     });
   }
 
-  // ============================================================
-  // EXCLUIR
-  // ============================================================
+  /* ============================================================
+     EXCLUIR
+  ============================================================ */
 
   async function handleDelete(id) {
     const confirmed = window.confirm(
-      "Deseja excluir esta ação?"
+      "Deseja excluir este plano de ação?",
     );
 
     if (!confirmed) {
@@ -482,8 +623,8 @@ export default function ActionPlan({
       setLocalActions((old) =>
         old.filter(
           (item) =>
-            String(item.id) !== String(id)
-        )
+            String(item.id) !== String(id),
+        ),
       );
 
       if (
@@ -493,102 +634,129 @@ export default function ActionPlan({
         setSelectedAction(null);
       }
 
-      alert("Ação excluída com sucesso.");
+      alert("Plano excluído com sucesso.");
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro ao excluir:",
-        error.response?.data || error
+        error.response?.data || error,
       );
 
       alert(
         error.response?.data?.message ||
-          "Erro ao excluir ação."
+          "Erro ao excluir ação.",
       );
     }
   }
 
-  // ============================================================
-  // SINAL
-  // ============================================================
+  /* ============================================================
+     SINAL
+  ============================================================ */
 
   function getSignal(action) {
     if (action.status === "Concluído") {
       return {
         text: "Concluído",
-        className: "green",
+        className: "success",
       };
     }
 
     if (!action.due_date) {
       return {
         text: "Sem prazo",
-        className: "yellow",
+        className: "neutral",
       };
     }
 
     const today = new Date();
 
-    today.setHours(
-      0,
-      0,
-      0,
-      0
-    );
+    today.setHours(0, 0, 0, 0);
+
+    const rawDate =
+      String(action.due_date).slice(0, 10);
 
     const due = new Date(
-      action.due_date
-    );
-
-    due.setHours(
-      0,
-      0,
-      0,
-      0
+      `${rawDate}T00:00:00`,
     );
 
     const diff = Math.ceil(
       (due - today) /
-        (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24),
     );
 
     if (diff < 0) {
       return {
         text: "Atrasado",
-        className: "red",
+        className: "danger",
+      };
+    }
+
+    if (diff === 0) {
+      return {
+        text: "Vence hoje",
+        className: "warning",
       };
     }
 
     if (diff <= 7) {
       return {
-        text: "Próximo",
-        className: "yellow",
+        text: `${diff}d restantes`,
+        className: "warning",
       };
     }
 
     return {
       text: "No prazo",
-      className: "green",
+      className: "success",
     };
   }
 
-  // ============================================================
-  // NOME DO CONTRATO
-  // ============================================================
+  /* ============================================================
+     STATUS
+  ============================================================ */
 
-  function getContractName(contractId) {
+  function getStatusClass(status) {
+    if (status === "Concluído") {
+      return "completed";
+    }
+
+    if (status === "Em andamento") {
+      return "running";
+    }
+
+    return "pending";
+  }
+
+  /* ============================================================
+     CONTRATO
+  ============================================================ */
+
+  function getContractName(contractId, action = null) {
+    /*
+      Primeiro utiliza o CR já enriquecido pelo dashboard.
+    */
+    const directName = firstNonEmpty(
+      action?.cr,
+      action?.contract,
+      action?.contract_number,
+      action?.contractNumber,
+    );
+
+    if (directName) {
+      return directName;
+    }
+
     if (
       contractId === undefined ||
       contractId === null ||
       contractId === ""
     ) {
-      return "-";
+      return "Contrato não informado";
     }
 
     const contract =
       normalizedContracts.find(
         (item) =>
-          String(item.id) ===
-          String(contractId)
+          String(item.id) === String(contractId),
       );
 
     return (
@@ -597,9 +765,9 @@ export default function ActionPlan({
     );
   }
 
-  // ============================================================
-  // ARQUIVOS
-  // ============================================================
+  /* ============================================================
+     ARQUIVOS
+  ============================================================ */
 
   async function handleFiles(action) {
     setSelectedAction(action);
@@ -611,30 +779,26 @@ export default function ActionPlan({
         `/actions/${action.id}/files`,
         {
           headers: authHeader(),
-        }
+        },
       );
 
       setFiles(
         Array.isArray(data)
           ? data
-          : []
+          : [],
       );
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro ao carregar arquivos:",
-        error.response?.data || error
+        error.response?.data || error,
       );
 
       alert(
         error.response?.data?.message ||
-          "Erro ao carregar arquivos."
+          "Erro ao carregar arquivos.",
       );
     }
   }
-
-  // ============================================================
-  // UPLOAD
-  // ============================================================
 
   async function uploadActionFiles() {
     if (
@@ -653,68 +817,55 @@ export default function ActionPlan({
     try {
       setUploading(true);
 
-      const { data } =
-        await api.post(
-          `/actions/${selectedAction.id}/files`,
-          formData,
-          {
-            headers: {
-              ...authHeader(),
-              "Content-Type":
-                "multipart/form-data",
-            },
-          }
-        );
+      const { data } = await api.post(
+        `/actions/${selectedAction.id}/files`,
+        formData,
+        {
+          headers: {
+            ...authHeader(),
+            "Content-Type":
+              "multipart/form-data",
+          },
+        },
+      );
 
       setFiles(
         Array.isArray(data)
           ? data
-          : []
+          : [],
       );
 
       setSelectedFiles([]);
 
-      /*
-       * Atualiza a contagem de arquivos
-       * na tabela sem recarregar a página.
-       */
       setLocalActions((old) =>
         old.map((item) =>
           String(item.id) ===
           String(selectedAction.id)
             ? {
                 ...item,
-                files:
-                  Array.isArray(data)
-                    ? data
-                    : [],
+                files: Array.isArray(data)
+                  ? data
+                  : [],
               }
-            : item
-        )
+            : item,
+        ),
       );
 
-      alert(
-        "Arquivos enviados com sucesso."
-      );
+      alert("Arquivos enviados com sucesso.");
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro no upload:",
-        error.response?.data ||
-          error
+        error.response?.data || error,
       );
 
       alert(
         error.response?.data?.message ||
-          "Erro ao enviar arquivos."
+          "Erro ao enviar arquivos.",
       );
     } finally {
       setUploading(false);
     }
   }
-
-  // ============================================================
-  // DOWNLOAD DO ARQUIVO
-  // ============================================================
 
   async function downloadFile(file) {
     if (!selectedAction || !file) {
@@ -727,12 +878,12 @@ export default function ActionPlan({
         {
           headers: authHeader(),
           responseType: "blob",
-        }
+        },
       );
 
       const blobUrl =
         window.URL.createObjectURL(
-          new Blob([response.data])
+          new Blob([response.data]),
         );
 
       const link =
@@ -751,32 +902,19 @@ export default function ActionPlan({
 
       link.remove();
 
-      window.URL.revokeObjectURL(
-        blobUrl
-      );
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro ao baixar arquivo:",
-        error.response?.data ||
-          error
+        error.response?.data || error,
       );
 
-      alert(
-        "Erro ao baixar arquivo."
-      );
+      alert("Erro ao baixar arquivo.");
     }
   }
 
-  // ============================================================
-  // REMOVER ARQUIVO
-  // ============================================================
-
   async function removeFile(fileId) {
-    if (
-      !window.confirm(
-        "Excluir arquivo?"
-      )
-    ) {
+    if (!window.confirm("Excluir arquivo?")) {
       return;
     }
 
@@ -789,15 +927,14 @@ export default function ActionPlan({
         `/actions/${selectedAction.id}/files/${fileId}`,
         {
           headers: authHeader(),
-        }
+        },
       );
 
       setFiles((old) =>
         old.filter(
           (file) =>
-            String(file.id) !==
-            String(fileId)
-        )
+            String(file.id) !== String(fileId),
+        ),
       );
 
       setLocalActions((old) =>
@@ -811,514 +948,644 @@ export default function ActionPlan({
 
           return {
             ...item,
+
             files: Array.isArray(item.files)
               ? item.files.filter(
                   (file) =>
                     String(file.id) !==
-                    String(fileId)
+                    String(fileId),
                 )
               : [],
           };
-        })
+        }),
       );
     } catch (error) {
       console.error(
         "[ACTION FRONT] Erro ao excluir arquivo:",
-        error.response?.data ||
-          error
+        error.response?.data || error,
       );
 
       alert(
         error.response?.data?.message ||
-          "Erro ao excluir arquivo."
+          "Erro ao excluir arquivo.",
       );
     }
   }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
+  /* ============================================================
+     RENDER
+  ============================================================ */
 
   return (
     <div className="action-page">
-      <div className="action-card">
+      {/* ======================================================
+          HEADER EXECUTIVO
+      ====================================================== */}
 
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
+      <section className="action-hero">
+        <div className="action-hero-copy">
+          <span className="action-eyebrow">
+            Execução assistida
+          </span>
 
-        <div className="action-header">
+          <h1>Plano de Ação</h1>
+
+          <p>
+            Estruture iniciativas, acompanhe responsáveis,
+            prazos e resultados dos contratos.
+          </p>
+        </div>
+
+        <div className="action-hero-context">
+          <span>Visão atual</span>
+
+          <strong>
+            {contratoSelecionado ||
+              "Todos os contratos"}
+          </strong>
+
+          <small>
+            {stats.total} plano
+            {stats.total !== 1 ? "s" : ""} encontrado
+            {stats.total !== 1 ? "s" : ""}
+          </small>
+        </div>
+      </section>
+
+      {/* ======================================================
+          INDICADORES
+      ====================================================== */}
+
+      <section className="action-kpi-grid">
+        <article className="action-kpi">
+          <div className="action-kpi-icon">
+            01
+          </div>
+
           <div>
-            <span className="action-eyebrow">
-              Execução Assistida
+            <span>Total de planos</span>
+            <strong>{stats.total}</strong>
+          </div>
+        </article>
+
+        <article className="action-kpi">
+          <div className="action-kpi-icon">
+            02
+          </div>
+
+          <div>
+            <span>Em andamento</span>
+            <strong>{stats.running}</strong>
+          </div>
+        </article>
+
+        <article className="action-kpi">
+          <div className="action-kpi-icon danger">
+            !
+          </div>
+
+          <div>
+            <span>Atrasados</span>
+            <strong>{stats.delayed}</strong>
+          </div>
+        </article>
+
+        <article className="action-kpi">
+          <div className="action-kpi-icon success">
+            ✓
+          </div>
+
+          <div>
+            <span>Concluídos</span>
+            <strong>{stats.completed}</strong>
+          </div>
+        </article>
+      </section>
+
+      {/* ======================================================
+          FORMULÁRIO
+      ====================================================== */}
+
+      <section className="action-editor">
+        <div className="action-section-header">
+          <div>
+            <span className="section-kicker">
+              {editingId
+                ? "Editando plano"
+                : "Novo plano"}
             </span>
 
             <h2>
-              Plano de Ação
+              {editingId
+                ? "Atualizar plano de ação"
+                : "Cadastrar plano de ação"}
             </h2>
-
-            <p>
-              Cadastre, acompanhe e
-              gerencie os planos de
-              ação diretamente por
-              contrato.
-            </p>
           </div>
-        </div>
-
-        {/* =====================================================
-            FORMULÁRIO
-        ====================================================== */}
-
-        <form
-          className="action-form-horizontal"
-          onSubmit={handleSubmit}
-        >
-
-          {/* CONTRATO */}
-
-          <select
-            name="contract_id"
-            value={form.contract_id}
-            onChange={handleChange}
-            required
-            disabled={contractsLoading}
-          >
-            <option value="">
-              {contractsLoading
-                ? "Carregando contratos..."
-                : "Selecione o contrato"}
-            </option>
-
-            {normalizedContracts.map(
-              (contract) => (
-                <option
-                  key={contract.id}
-                  value={contract.id}
-                >
-                  {contract.name}
-                </option>
-              )
-            )}
-          </select>
-
-          {/* DESCRIÇÃO */}
-
-          <input
-            name="description"
-            placeholder="Descrição da ação"
-            value={form.description}
-            onChange={handleChange}
-            required
-          />
-
-          {/* RESPONSÁVEL */}
-
-          <input
-            name="responsible"
-            placeholder="Responsável"
-            value={form.responsible}
-            onChange={handleChange}
-          />
-
-          {/* PRAZO */}
-
-          <input
-            type="date"
-            name="due_date"
-            value={form.due_date}
-            onChange={handleChange}
-          />
-
-          {/* STATUS */}
-
-          <select
-            name="status"
-            value={form.status}
-            onChange={handleChange}
-          >
-            <option value="A fazer">
-              A Fazer
-            </option>
-
-            <option value="Em andamento">
-              Em andamento
-            </option>
-
-            <option value="Concluído">
-              Concluído
-            </option>
-          </select>
-
-          {/* SALVAR */}
-
-          <button
-            type="submit"
-            className="primary"
-            disabled={
-              loading ||
-              contractsLoading ||
-              normalizedContracts.length === 0
-            }
-          >
-            {loading
-              ? "Salvando..."
-              : editingId
-                ? "Atualizar"
-                : "Adicionar"}
-          </button>
-
-          {/* CANCELAR */}
 
           {editingId && (
             <button
               type="button"
+              className="action-cancel-edit"
               onClick={clearForm}
             >
-              Cancelar
+              Cancelar edição
             </button>
           )}
-        </form>
+        </div>
 
-        {/* ERRO CONTRATOS */}
+        <form
+          className="action-form"
+          onSubmit={handleSubmit}
+        >
+          <div className="action-form-main">
+            <label className="action-field contract-field">
+              <span>Contrato</span>
 
-        {contractsError && (
-          <div
-            style={{
-              marginTop: 10,
-              color: "#b91c1c",
-              fontSize: 14,
-            }}
-          >
-            {contractsError}
+              <select
+                name="contract_id"
+                value={form.contract_id}
+                onChange={handleChange}
+                required
+                disabled={contractsLoading}
+              >
+                <option value="">
+                  {contractsLoading
+                    ? "Carregando contratos..."
+                    : "Selecione um contrato"}
+                </option>
 
-            <button
-              type="button"
-              onClick={loadContracts}
-              style={{
-                marginLeft: 10,
-              }}
-            >
-              Tentar novamente
-            </button>
+                {normalizedContracts.map(
+                  (contract) => (
+                    <option
+                      key={contract.id}
+                      value={contract.id}
+                    >
+                      {contract.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+
+            <label className="action-field description-field">
+              <span>Ação</span>
+
+              <input
+                name="description"
+                placeholder="Ex.: Implantar rotina preventiva de absenteísmo"
+                value={form.description}
+                onChange={handleChange}
+                required
+              />
+            </label>
+
+            <label className="action-field responsible-field">
+              <span>Responsável</span>
+
+              <input
+                name="responsible"
+                placeholder="Nome ou área"
+                value={form.responsible}
+                onChange={handleChange}
+              />
+            </label>
+
+            <label className="action-field date-field">
+              <span>Prazo</span>
+
+              <input
+                type="date"
+                name="due_date"
+                value={form.due_date}
+                onChange={handleChange}
+              />
+            </label>
+
+            <label className="action-field status-field">
+              <span>Status</span>
+
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+              >
+                <option value="A fazer">
+                  A fazer
+                </option>
+
+                <option value="Em andamento">
+                  Em andamento
+                </option>
+
+                <option value="Concluído">
+                  Concluído
+                </option>
+              </select>
+            </label>
           </div>
-        )}
 
-        {/* NENHUM CONTRATO */}
+          <div className="action-form-details">
+            <label className="action-field">
+              <span>Plano de execução</span>
 
-        {!contractsLoading &&
-          !contractsError &&
-          normalizedContracts.length === 0 && (
-            <div
-              style={{
-                marginTop: 10,
-                color: "#b45309",
-                fontSize: 14,
-              }}
-            >
-              Nenhum contrato encontrado.
+              <textarea
+                rows={5}
+                name="execution_plan"
+                placeholder="Descreva como esta ação será executada, etapas, responsáveis envolvidos e abordagem..."
+                value={form.execution_plan}
+                onChange={handleChange}
+              />
+            </label>
+
+            <label className="action-field">
+              <span>Indicadores de acompanhamento</span>
+
+              <textarea
+                rows={5}
+                name="indicators"
+                placeholder="Defina métricas, evidências e critérios que indicarão a evolução ou conclusão..."
+                value={form.indicators}
+                onChange={handleChange}
+              />
+            </label>
+          </div>
+
+          {contractsError && (
+            <div className="action-inline-error">
+              <span>{contractsError}</span>
+
+              <button
+                type="button"
+                onClick={loadContracts}
+              >
+                Tentar novamente
+              </button>
             </div>
           )}
 
-        {/* =====================================================
-            CAMPOS COMPLEMENTARES
-        ====================================================== */}
+          <div className="action-form-footer">
+            <div className="form-hint">
+              <span className="form-hint-dot" />
 
-        <div className="action-textareas">
+              Os campos Ação e Contrato são obrigatórios.
+            </div>
 
-          <textarea
-            rows={3}
-            name="execution_plan"
-            placeholder="Plano de execução..."
-            value={form.execution_plan}
-            onChange={handleChange}
-          />
-
-          <textarea
-            rows={3}
-            name="indicators"
-            placeholder="Indicadores de acompanhamento..."
-            value={form.indicators}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* =====================================================
-            PROGRESSO
-        ====================================================== */}
-
-        <div className="plan-progress">
-
-          <div className="progress-header">
-            <span>
-              Andamento do Plano
-            </span>
-
-            <strong>
-              {progress}%
-            </strong>
-          </div>
-
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${progress}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* =====================================================
-            TABELA
-        ====================================================== */}
-
-        <div className="action-table">
-
-          <table>
-
-            <thead>
-              <tr>
-                <th>Mês</th>
-                <th>Contrato</th>
-                <th>Ação</th>
-                <th>Execução</th>
-                <th>Indicadores</th>
-                <th>Responsável</th>
-                <th>Prazo</th>
-                <th>Status</th>
-                <th>Condição</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {filteredActions.length === 0 ? (
-
-                <tr>
-                  <td colSpan="10">
-                    Nenhuma ação cadastrada.
-                  </td>
-                </tr>
-
-              ) : (
-
-                filteredActions.map(
-                  (item) => {
-                    const signal =
-                      getSignal(item);
-
-                    return (
-                      <tr
-                        key={item.id}
-                      >
-
-                        {/* MÊS */}
-
-                        <td>
-                          {item.created_at
-                            ? new Date(
-                                item.created_at
-                              ).toLocaleDateString(
-                                "pt-BR",
-                                {
-                                  month:
-                                    "2-digit",
-                                  year:
-                                    "numeric",
-                                }
-                              )
-                            : "-"}
-                        </td>
-
-                        {/* CONTRATO */}
-
-                        <td>
-                          {getContractName(
-                            item.contract_id
-                          )}
-                        </td>
-
-                        {/* AÇÃO */}
-
-                        <td>
-                          {item.description ||
-                            "-"}
-                        </td>
-
-                        {/* EXECUÇÃO */}
-
-                        <td>
-                          {item.execution_plan ||
-                            "-"}
-                        </td>
-
-                        {/* INDICADORES */}
-
-                        <td>
-                          {item.indicators ||
-                            "-"}
-                        </td>
-
-                        {/* RESPONSÁVEL */}
-
-                        <td>
-                          {item.responsible ||
-                            "-"}
-                        </td>
-
-                        {/* PRAZO */}
-
-                        <td>
-                          {item.due_date
-                            ? new Date(
-                                item.due_date
-                              ).toLocaleDateString(
-                                "pt-BR"
-                              )
-                            : "-"}
-                        </td>
-
-                        {/* STATUS */}
-
-                        <td>
-                          {item.status ||
-                            "-"}
-                        </td>
-
-                        {/* CONDIÇÃO */}
-
-                        <td>
-                          <span
-                            className={`action-signal ${signal.className}`}
-                          >
-                            {signal.text}
-                          </span>
-                        </td>
-
-                        {/* AÇÕES */}
-
-                        <td className="action-buttons">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleEdit(item)
-                            }
-                          >
-                            Editar
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleFiles(item)
-                            }
-                          >
-                            Arquivo
-                            {item.files?.length
-                              ? ` (${item.files.length})`
-                              : ""}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDelete(
-                                item.id
-                              )
-                            }
-                          >
-                            Excluir
-                          </button>
-
-                        </td>
-                      </tr>
-                    );
-                  }
-                )
+            <div className="form-actions">
+              {editingId && (
+                <button
+                  type="button"
+                  className="action-secondary-btn"
+                  onClick={clearForm}
+                >
+                  Cancelar
+                </button>
               )}
 
-            </tbody>
-          </table>
-        </div>
-      </div>
+              <button
+                type="submit"
+                className="action-primary-btn"
+                disabled={
+                  loading ||
+                  contractsLoading ||
+                  normalizedContracts.length === 0
+                }
+              >
+                {loading
+                  ? "Salvando..."
+                  : editingId
+                    ? "Salvar alterações"
+                    : "Adicionar plano"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
 
       {/* ======================================================
-          MODAL ARQUIVOS
+          PROGRESSO
+      ====================================================== */}
+
+      <section className="action-progress-card">
+        <div className="action-progress-top">
+          <div>
+            <span className="section-kicker">
+              Evolução
+            </span>
+
+            <h3>Andamento dos planos</h3>
+          </div>
+
+          <div className="action-progress-value">
+            <strong>{stats.progress}%</strong>
+            <span>concluído</span>
+          </div>
+        </div>
+
+        <div className="action-progress-track">
+          <div
+            className="action-progress-fill"
+            style={{
+              width: `${stats.progress}%`,
+            }}
+          />
+        </div>
+
+        <div className="action-progress-caption">
+          <span>
+            {stats.completed} concluído
+            {stats.completed !== 1 ? "s" : ""}
+          </span>
+
+          <span>
+            {stats.running} em andamento
+          </span>
+
+          <span>
+            {stats.pending} pendente
+            {stats.pending !== 1 ? "s" : ""}
+          </span>
+        </div>
+      </section>
+
+      {/* ======================================================
+          PLANOS
+      ====================================================== */}
+
+      <section className="action-list-section">
+        <div className="action-section-header">
+          <div>
+            <span className="section-kicker">
+              Gestão
+            </span>
+
+            <h2>Planos cadastrados</h2>
+
+            <p>
+              Visualização detalhada das ações do filtro atual.
+            </p>
+          </div>
+
+          <div className="action-list-count">
+            {filteredActions.length}
+          </div>
+        </div>
+
+        {filteredActions.length === 0 ? (
+          <div className="action-empty">
+            <div className="action-empty-icon">
+              +
+            </div>
+
+            <strong>
+              Nenhum plano encontrado
+            </strong>
+
+            <span>
+              Não há planos de ação para o filtro selecionado.
+            </span>
+          </div>
+        ) : (
+          <div className="action-plan-list">
+            {filteredActions.map((item) => {
+              const signal = getSignal(item);
+
+              const contractName =
+                getContractName(
+                  item.contract_id,
+                  item,
+                );
+
+              return (
+                <article
+                  className="action-plan-card"
+                  key={item.id}
+                >
+                  {/* CABEÇALHO */}
+
+                  <div className="plan-card-header">
+                    <div className="plan-main-info">
+                      <div className="plan-contract-line">
+                        <span className="plan-contract">
+                          {contractName}
+                        </span>
+
+                        <span className="plan-period">
+                          {formatMonth(
+                            item.created_at,
+                          )}
+                        </span>
+                      </div>
+
+                      <h3>
+                        {item.description ||
+                          "Ação não informada"}
+                      </h3>
+                    </div>
+
+                    <div className="plan-badges">
+                      <span
+                        className={`plan-status ${getStatusClass(
+                          item.status,
+                        )}`}
+                      >
+                        {item.status ||
+                          "Sem status"}
+                      </span>
+
+                      <span
+                        className={`plan-signal ${signal.className}`}
+                      >
+                        {signal.text}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* CONTEÚDO */}
+
+                  <div className="plan-content-grid">
+                    <div className="plan-content-block">
+                      <span className="plan-content-label">
+                        Execução
+                      </span>
+
+                      <p>
+                        {item.execution_plan ||
+                          "Plano de execução ainda não informado."}
+                      </p>
+                    </div>
+
+                    <div className="plan-content-block">
+                      <span className="plan-content-label">
+                        Indicadores
+                      </span>
+
+                      <p>
+                        {item.indicators ||
+                          "Indicadores de acompanhamento ainda não informados."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* RODAPÉ */}
+
+                  <div className="plan-card-footer">
+                    <div className="plan-metadata">
+                      <div className="metadata-item">
+                        <span>Responsável</span>
+
+                        <strong>
+                          {item.responsible ||
+                            "Não informado"}
+                        </strong>
+                      </div>
+
+                      <div className="metadata-item">
+                        <span>Prazo</span>
+
+                        <strong>
+                          {formatDate(
+                            item.due_date,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="metadata-item">
+                        <span>Arquivos</span>
+
+                        <strong>
+                          {Array.isArray(
+                            item.files,
+                          )
+                            ? item.files.length
+                            : 0}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="plan-actions">
+                      <button
+                        type="button"
+                        className="plan-action-btn"
+                        onClick={() =>
+                          handleEdit(item)
+                        }
+                      >
+                        Editar
+                      </button>
+
+                      <button
+                        type="button"
+                        className="plan-action-btn"
+                        onClick={() =>
+                          handleFiles(item)
+                        }
+                      >
+                        Arquivos
+                      </button>
+
+                      <button
+                        type="button"
+                        className="plan-action-btn danger"
+                        onClick={() =>
+                          handleDelete(item.id)
+                        }
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ======================================================
+          MODAL DE ARQUIVOS
       ====================================================== */}
 
       {selectedAction && (
-
         <div
           className="files-modal"
           onClick={() =>
             setSelectedAction(null)
           }
         >
-
           <div
             className="files-modal-content"
             onClick={(event) =>
               event.stopPropagation()
             }
           >
-
-            {/* HEADER */}
-
             <div className="files-header">
-
               <div>
+                <span className="section-kicker">
+                  Documentos
+                </span>
 
-                <h3>
-                  Arquivos da ação
-                </h3>
+                <h3>Arquivos da ação</h3>
 
                 <p>
-                  <strong>
-                    Ação:
-                  </strong>{" "}
-                  {
-                    selectedAction.description
-                  }
+                  {selectedAction.description}
                 </p>
 
-                <p>
-                  <strong>
-                    Contrato:
-                  </strong>{" "}
+                <small>
                   {getContractName(
-                    selectedAction.contract_id
+                    selectedAction.contract_id,
+                    selectedAction,
                   )}
-                </p>
-
+                </small>
               </div>
+
+              <button
+                type="button"
+                className="modal-close-x"
+                onClick={() =>
+                  setSelectedAction(null)
+                }
+              >
+                ×
+              </button>
             </div>
 
-            {/* UPLOAD */}
-
             <div className="upload-area">
+              <label className="file-picker">
+                <span>
+                  Selecionar arquivos
+                </span>
 
-              <input
-                type="file"
-                multiple
-                onChange={(event) =>
-                  setSelectedFiles(
-                    Array.from(
-                      event.target.files ||
-                        []
+                <input
+                  type="file"
+                  multiple
+                  onChange={(event) =>
+                    setSelectedFiles(
+                      Array.from(
+                        event.target.files ||
+                          [],
+                      ),
                     )
-                  )
-                }
-              />
+                  }
+                />
+              </label>
+
+              {selectedFiles.length > 0 && (
+                <span className="selected-files-count">
+                  {selectedFiles.length} arquivo
+                  {selectedFiles.length !== 1
+                    ? "s"
+                    : ""}{" "}
+                  selecionado
+                  {selectedFiles.length !== 1
+                    ? "s"
+                    : ""}
+                </span>
+              )}
 
               <button
                 type="button"
                 className="upload-btn"
-                onClick={
-                  uploadActionFiles
-                }
+                onClick={uploadActionFiles}
                 disabled={
                   uploading ||
                   !selectedFiles.length
@@ -1328,131 +1595,73 @@ export default function ActionPlan({
                   ? "Enviando..."
                   : "Enviar arquivos"}
               </button>
-
             </div>
 
-            {/* ARQUIVOS */}
+            <div className="files-list">
+              {files.length === 0 ? (
+                <div className="files-empty">
+                  Nenhum arquivo enviado.
+                </div>
+              ) : (
+                files.map((file) => (
+                  <div
+                    className="file-item"
+                    key={file.id}
+                  >
+                    <div className="file-info">
+                      <div className="file-icon">
+                        DOC
+                      </div>
 
-            <div className="files-table">
+                      <div>
+                        <strong>
+                          {file.originalName ||
+                            file.name ||
+                            "Arquivo"}
+                        </strong>
 
-              <table>
+                        <span>
+                          Documento anexado
+                        </span>
+                      </div>
+                    </div>
 
-                <thead>
+                    <div className="file-actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadFile(file)
+                        }
+                      >
+                        Baixar
+                      </button>
 
-                  <tr>
-
-                    <th>
-                      Arquivo
-                    </th>
-
-                    <th
-                      style={{
-                        width: 180,
-                      }}
-                    >
-                      Ações
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {files.length === 0 ? (
-
-                    <tr>
-
-                      <td colSpan="2">
-                        Nenhum arquivo
-                        enviado.
-                      </td>
-
-                    </tr>
-
-                  ) : (
-
-                    files.map(
-                      (file) => (
-                        <tr
-                          key={
-                            file.id
-                          }
-                        >
-
-                          <td className="file-name">
-
-                            📄{" "}
-
-                            {
-                              file.originalName ||
-                              file.name ||
-                              "Arquivo"
-                            }
-
-                          </td>
-
-                          <td>
-
-                            <div className="file-actions">
-
-                              <button
-                                type="button"
-                                className="download-btn"
-                                onClick={() =>
-                                  downloadFile(
-                                    file
-                                  )
-                                }
-                              >
-                                Baixar
-                              </button>
-
-                              <button
-                                type="button"
-                                className="delete-btn"
-                                onClick={() =>
-                                  removeFile(
-                                    file.id
-                                  )
-                                }
-                              >
-                                Excluir
-                              </button>
-
-                            </div>
-
-                          </td>
-
-                        </tr>
-                      )
-                    )
-                  )}
-
-                </tbody>
-
-              </table>
-
+                      <button
+                        type="button"
+                        className="delete"
+                        onClick={() =>
+                          removeFile(file.id)
+                        }
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-
-            {/* FECHAR */}
 
             <div className="files-footer">
-
               <button
                 type="button"
-                className="close-modal-btn"
                 onClick={() =>
                   setSelectedAction(null)
                 }
               >
                 Fechar
               </button>
-
             </div>
-
           </div>
-
         </div>
       )}
     </div>
