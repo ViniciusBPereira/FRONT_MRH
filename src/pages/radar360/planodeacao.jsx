@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import "./planodeacao.css";
+import {downloadActionPlanPdf} from "./actionPlanPdf.jsx";
 
 export default function ActionPlan({
   actions: actionsProp = [],
   contracts: contractsProp = [],
+  bpSelecionado = "",
   contratoSelecionado = "",
 }) {
   /* ============================================================
@@ -18,6 +20,8 @@ export default function ActionPlan({
   /* ============================================================
      HELPERS
   ============================================================ */
+  const [exportingPdf, setExportingPdf] =
+    useState(false);
 
   function normalizeText(value) {
     if (value === null || value === undefined) {
@@ -310,10 +314,6 @@ export default function ActionPlan({
       return;
     }
 
-    /*
-      Se o filtro foi limpo, não apagamos uma seleção manual
-      que o usuário já tenha feito no formulário.
-    */
     if (!contratoSelecionado) {
       return;
     }
@@ -766,6 +766,100 @@ export default function ActionPlan({
   }
 
   /* ============================================================
+   EXPORTAR PDF
+============================================================ */
+
+async function handleExportPdf() {
+  if (!filteredActions.length) {
+    alert(
+      "Não existem planos de ação no filtro atual para exportar.",
+    );
+
+    return;
+  }
+
+  try {
+    setExportingPdf(true);
+
+    /*
+      Normalizamos os dados antes de entregar
+      para o documento PDF.
+
+      Dessa forma o componente responsável pelo
+      PDF não precisa conhecer a estrutura interna
+      da tela.
+    */
+    const plansForPdf =
+      filteredActions.map((item) => {
+        const signal =
+          getSignal(item);
+
+        return {
+          id:
+            item.id,
+
+          contract:
+            getContractName(
+              item.contract_id,
+              item,
+            ),
+
+          description:
+            item.description,
+
+          execution_plan:
+            item.execution_plan,
+
+          indicators:
+            item.indicators,
+
+          responsible:
+            item.responsible,
+
+          due_date:
+            item.due_date,
+
+          status:
+            item.status,
+
+          condition:
+            signal.text,
+
+          created_at:
+            item.created_at,
+
+          file_count:
+            Array.isArray(item.files)
+              ? item.files.length
+              : 0,
+        };
+      });
+
+    await downloadActionPlanPdf({
+      plans: plansForPdf,
+
+      bpSelecionado,
+
+      contratoSelecionado,
+
+      stats,
+    });
+  } catch (error) {
+    console.error(
+      "[ACTION PDF] Erro ao gerar relatório:",
+      error,
+    );
+
+    alert(
+      error?.message ||
+        "Não foi possível gerar o PDF.",
+    );
+  } finally {
+    setExportingPdf(false);
+  }
+}
+
+  /* ============================================================
      ARQUIVOS
   ============================================================ */
 
@@ -996,6 +1090,7 @@ export default function ActionPlan({
           </p>
         </div>
 
+        <div className="action-hero-side">
         <div className="action-hero-context">
           <span>Visão atual</span>
 
@@ -1010,6 +1105,61 @@ export default function ActionPlan({
             {stats.total !== 1 ? "s" : ""}
           </small>
         </div>
+
+        <button
+          type="button"
+          className="action-export-btn"
+          onClick={handleExportPdf}
+          disabled={
+            exportingPdf ||
+            filteredActions.length === 0
+          }
+        >
+          <span className="action-export-icon">
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M6 2.75h8l4 4V21.25H6V2.75Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinejoin="round"
+              />
+
+              <path
+                d="M14 2.75v4h4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinejoin="round"
+              />
+
+              <path
+                d="M12 10v6m0 0-2.5-2.5M12 16l2.5-2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+
+          <span className="action-export-copy">
+            <strong>
+              {exportingPdf
+                ? "Gerando PDF..."
+                : "Exportar PDF"}
+            </strong>
+
+            <small>
+              Relatório do filtro atual
+            </small>
+          </span>
+        </button>
+      </div>
       </section>
 
       {/* ======================================================
