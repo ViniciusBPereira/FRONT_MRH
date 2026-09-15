@@ -17,7 +17,7 @@ export default function Inicio() {
         <div className="bi-wrapper">
           <iframe
             title="Power BI - Visão Geral"
-            src="https://app.powerbi.com/view?r=eyJrIjoiMmRkOGZiNjAtMDExNC00YWI0LWJmZjMtZGQyZjU4ZmMwNmY2IiwidCI6IjQyODUyNWQ5LTIzYmQtNGY4Yy1hZmEyLTU2MDBmNDAxZjMyNiJ9"
+            src="https://app.powerbi.com/view?r=eyJrIjoiNDBkM2FhY2EtNjUwMi00OTg3LWIxYmMtNjk1NDEyZGFlZjhjIiwidCI6IjQyODUyNWQ5LTIzYmQtNGY4Yy1hZmEyLTU2MDBmNDAxZjMyNiJ9"
             frameBorder="0"
             allowFullScreen
           />
