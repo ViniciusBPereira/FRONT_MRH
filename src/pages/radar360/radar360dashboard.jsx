@@ -1477,10 +1477,12 @@ export default function Radar360Dashboard() {
       )}
 
       {/* ======================================================
-          DASHBOARD BI
-      ====================================================== */}
+    DASHBOARD DE VISITAS
+====================================================== */}
 
-      {activeTab === "bi" && <Dashboard />}
+{activeTab === "bi" && (
+  <Dashboard {...moduleProps} />
+)}
 
       {/* ======================================================
           CADASTRO DE CONTRATO
