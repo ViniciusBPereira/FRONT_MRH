@@ -12,6 +12,7 @@ const SUBMIT_URL = "/api/melhorias";
 const ROOM = "Auditório Grupo GPS";
 const QUALIDADE = "Yasmin / Amanda";
 const PROJETOS = "Enzo / Ana";
+const LÍDER = "THAMIRES";
 
 // date: "AAAA-MM-DD" · time: "HH:MM" (ou null se o horário ainda não foi definido) · dur: duração em minutos
 // speaker: nome do palestrante (ou null para não mostrar palestrante)
@@ -19,10 +20,10 @@ const PROJETOS = "Enzo / Ana";
 const TALKS = [
   {
     date: "2026-11-09",
-    time: null,
+    time: "15:00",
     dur: 60,
     tag: "Abertura",
-    speaker: null,
+    speaker: LÍDER,
     room: ROOM,
     title: "Abertura da Semana da Qualidade",
     desc: "Abertura oficial da Semana da Qualidade, com a apresentação da programação e do propósito do evento.",
@@ -54,7 +55,7 @@ const TALKS = [
     tag: "Qualidade",
     speaker: QUALIDADE,
     room: ROOM,
-    title: "O Contrato sempre avisa como o score influencia",
+    title: "Todo desempenho tem um termômetro você está olhando para ele?",
     desc: "Um olhar sobre o que o contrato já informa a respeito da influência do score e por que acompanhar esse indicador faz diferença na qualidade.",
   },
   {
