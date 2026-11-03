@@ -12,7 +12,6 @@ const SUBMIT_URL = "/api/melhorias";
 const ROOM = "Auditório Grupo GPS";
 const QUALIDADE = "Yasmin / Amanda";
 const PROJETOS = "Enzo / Ana";
-const LÍDER = "Thamires";
 
 // date: "AAAA-MM-DD" · time: "HH:MM" (ou null se o horário ainda não foi definido) · dur: duração em minutos
 // speaker: nome do palestrante (ou null para não mostrar palestrante)
@@ -23,7 +22,7 @@ const TALKS = [
     time: "15:00",
     dur: 60,
     tag: "Abertura",
-    speaker: LÍDER,
+    speaker: "Thamires",
     room: ROOM,
     title: "Abertura da Semana da Qualidade",
     desc: "Abertura oficial da Semana da Qualidade, com a apresentação da programação e do propósito do evento.",
