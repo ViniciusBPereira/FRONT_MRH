@@ -12,7 +12,7 @@ const SUBMIT_URL = "/api/melhorias";
 const ROOM = "Auditório Grupo GPS";
 const QUALIDADE = "Yasmin / Amanda";
 const PROJETOS = "Enzo / Ana";
-const LÍDER = "THAMIRES";
+const LÍDER = "Thamires";
 
 // date: "AAAA-MM-DD" · time: "HH:MM" (ou null se o horário ainda não foi definido) · dur: duração em minutos
 // speaker: nome do palestrante (ou null para não mostrar palestrante)
