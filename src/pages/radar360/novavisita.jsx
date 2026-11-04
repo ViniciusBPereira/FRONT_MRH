@@ -1,11 +1,194 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import "./novavisita.css";
+
+// Conversões e resolução de vínculos compartilhadas entre cadastro e histórico.
+function getArrayResponse(response) {
+  if (Array.isArray(response?.data)) return response.data;
+  for (const key of ["visits", "data", "rows", "results"]) {
+    if (Array.isArray(response?.data?.[key])) return response.data[key];
+  }
+  return [];
+}
+
+function contractCode(contract) {
+  return String(
+    contract?.contract ?? contract?.cr ?? contract?.contract_number ?? contract?.code ?? "",
+  ).trim();
+}
+
+function visitCode(visit) {
+  return String(
+    visit?.cr ?? visit?.contract ?? visit?.contract_number ?? visit?.contract_data?.contract ?? "",
+  ).trim();
+}
+
+function dateOnly(value) {
+  if (!value) return "";
+  const text = String(value);
+  const iso = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  return iso ? iso[1] : "";
+}
+
+function formatVisitDate(value) {
+  const iso = dateOnly(value);
+  if (!iso) return "Data não informada";
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+// Suporta vírgula decimal brasileira; não confunde vazio com zero.
+function numberFromBR(value, emptyValue = null) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return emptyValue;
+  }
+  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+  let normalized = String(value).trim().replace(/\s/g, "");
+  if (normalized.includes(",") && normalized.includes(".")) {
+    normalized = normalized.lastIndexOf(",") > normalized.lastIndexOf(".")
+      ? normalized.replace(/\./g, "").replace(",", ".")
+      : normalized.replace(/,/g, "");
+  } else {
+    normalized = normalized.replace(",", ".");
+  }
+  const result = Number(normalized);
+  return Number.isFinite(result) ? result : NaN;
+}
+
+function normalizeRootCause(value) {
+  if (Array.isArray(value)) return value.filter(Boolean).map(String);
+  if (!value) return [];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+    } catch { /* texto simples, não JSON */ }
+    return value.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function formatHistoryValue(value, format) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (format === "date") return formatVisitDate(value);
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+  if (typeof value === "object") return JSON.stringify(value);
+  if (format === "percent" || format === "currency" || format === "days") {
+    const parsed = numberFromBR(value, null);
+    if (parsed !== null && Number.isFinite(parsed)) {
+      const number = parsed.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+      if (format === "currency") return `R$ ${number}`;
+      return format === "percent" ? `${number}%` : `${number} dias`;
+    }
+  }
+  return String(value);
+}
+
+const HISTORICAL_GROUPS = [
+  {
+    title: "Identificação e operação",
+    fields: [
+      ["Cliente", "client"],
+      ["Unidade", "unit"],
+      ["Business Partner", "bp"],
+      ["Liderança responsável", "leadership_name"],
+      ["Efetivo", "headcount"],
+      ["PEC", "pec"],
+      ["Colaboradores abordados", "employees_approached"],
+      ["Turnover", "turnover", "percent"],
+      ["Absenteísmo", "absenteeism", "percent"],
+      ["H.E. Ineficiência", "he_inefficiency", "currency"],
+      ["Vagas abertas", "open_positions"],
+      ["Tempo médio de reposição", "replacement_days", "days"],
+      ["Ações trabalhistas", "labor_actions"],
+      ["Advertências", "warnings"],
+      ["eNPS", "enps"],
+    ],
+  },
+  {
+    title: "Diagnóstico dos pilares",
+    fields: [
+      ["Presença da liderança", "leadership_presence"],
+      ["Comunicação com a equipe", "leadership_communication"],
+      ["Gestão de rotina", "leadership_routine"],
+      ["Tratativa de desvios", "leadership_deviation"],
+      ["Engajamento", "climate_engagement"],
+      ["Escuta e acolhimento", "climate_listening"],
+      ["Relações internas", "climate_relationship"],
+      ["Satisfação", "climate_satisfaction"],
+      ["Recursos e equipamentos", "structure_resources"],
+      ["Escalas e cobertura", "structure_staffing"],
+      ["Ambiente de trabalho", "structure_environment"],
+      ["Suporte administrativo", "structure_support"],
+      ["Expectativas do cliente", "customer_expectation"],
+      ["Comunicação com cliente", "customer_communication"],
+      ["Qualidade percebida", "customer_quality"],
+      ["Solicitações", "customer_requests"],
+      ["Score Liderança", "leadership_score"],
+      ["Score Clima", "climate_score"],
+      ["Score Estrutura", "structure_score"],
+      ["Score Cliente", "customer_score"],
+    ],
+  },
+  {
+    title: "Análise e direcionamento",
+    fields: [
+      ["Causas-raiz", "root_cause"],
+      ["Evidências", "evidence"],
+      ["Panorama geral", "overview"],
+      ["Classificação", "classification"],
+      ["Prioridade", "priority"],
+      ["Parecer executivo", "executive_opinion"],
+      ["Plano de ação da visita", "action_plan"],
+    ],
+  },
+];
+
+function fillFormFromVisit(visit, contracts) {
+  const result = createInitialState();
+  for (const key of Object.keys(result)) {
+    if (visit?.[key] !== undefined && visit?.[key] !== null) {
+      result[key] = visit[key];
+    }
+  }
+  const directContractId = String(visit?.contract_id ?? "");
+  const matchedContract = contracts.find((c) =>
+    String(c.id) === directContractId ||
+    (visitCode(visit) && contractCode(c).toLowerCase() === visitCode(visit).toLowerCase()),
+  );
+  result.contract_id = matchedContract?.id ?? directContractId;
+  result.visit_date = dateOnly(visit?.visit_date);
+  result.root_cause = normalizeRootCause(visit?.root_cause);
+  return result;
+}
+
+// Estado inicial de um registro; os quatro pilares mantêm as opções atuais.
+function createInitialState() {
+  return {
+    contract_id: "", visit_date: "", employees_approached: "",
+    turnover: "", absenteeism: "", he_inefficiency: "",
+    open_positions: "", replacement_days: "", labor_actions: "",
+    warnings: "", enps: "",
+    leadership_presence: 0, leadership_communication: 0,
+    leadership_routine: 0, leadership_deviation: 0,
+    climate_engagement: 0, climate_listening: 0,
+    climate_relationship: 0, climate_satisfaction: 0,
+    structure_resources: 0, structure_staffing: 0,
+    structure_environment: 0, structure_support: 0,
+    customer_expectation: 0, customer_communication: 0,
+    customer_quality: 0, customer_requests: 0,
+    root_cause: [], evidence: "", overview: "",
+  };
+}
 
 export default function NovaVisita({
   editVisit = false,
   visit = null,
   visitId = null,
+  editTracking = false,
+  trackingId = null,
+  contratoSelecionado = "",
+  onReload,
 }) {
   // ============================================================
   // AUTH
@@ -38,73 +221,6 @@ export default function NovaVisita({
   // ESTADO INICIAL
   // ============================================================
 
-  const createInitialState = () => ({
-    // ----------------------------------------------------------
-    // IDENTIFICAÇÃO
-    // ----------------------------------------------------------
-
-    contract_id: "",
-    visit_date: "",
-    employees_approached: "",
-
-    // ----------------------------------------------------------
-    // INDICADORES
-    // ----------------------------------------------------------
-
-    turnover: "",
-    absenteeism: "",
-    he_inefficiency: "",
-    open_positions: "",
-    replacement_days: "",
-    labor_actions: 0,
-    warnings: 0,
-    enps: 30,
-
-    // ----------------------------------------------------------
-    // LIDERANÇA
-    // ----------------------------------------------------------
-
-    leadership_presence: 0,
-    leadership_communication: 0,
-    leadership_routine: 0,
-    leadership_deviation: 0,
-
-    // ----------------------------------------------------------
-    // CLIMA
-    // ----------------------------------------------------------
-
-    climate_engagement: 0,
-    climate_listening: 0,
-    climate_relationship: 0,
-    climate_satisfaction: 0,
-
-    // ----------------------------------------------------------
-    // ESTRUTURA
-    // ----------------------------------------------------------
-
-    structure_resources: 0,
-    structure_staffing: 0,
-    structure_environment: 0,
-    structure_support: 0,
-
-    // ----------------------------------------------------------
-    // CLIENTE
-    // ----------------------------------------------------------
-
-    customer_expectation: 0,
-    customer_communication: 0,
-    customer_quality: 0,
-    customer_requests: 0,
-
-    // ----------------------------------------------------------
-    // ANÁLISE QUALITATIVA
-    // ----------------------------------------------------------
-
-    root_cause: [],
-    evidence: "",
-    overview: "",
-  });
-
   const [form, setForm] = useState(createInitialState);
 
   const [contracts, setContracts] = useState([]);
@@ -113,6 +229,15 @@ export default function NovaVisita({
   const [loading, setLoading] = useState(false);
 
   const [contractError, setContractError] = useState("");
+  const [visitsHistory, setVisitsHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const [visibleHistoryCount, setVisibleHistoryCount] = useState(8);
+  const [editingHistoryId, setEditingHistoryId] = useState(null);
+  const [externalEditDismissed, setExternalEditDismissed] = useState(false);
+  const isExternalEdit = Boolean((editVisit || editTracking) && visit && !externalEditDismissed);
+  const isEditing = isExternalEdit || editingHistoryId !== null;
 
   // ============================================================
   // CAMPOS NUMÉRICOS
@@ -201,89 +326,88 @@ export default function NovaVisita({
   }, []);
 
   // ============================================================
-  // CARREGAR VISITA PARA EDIÇÃO
+  // HISTÓRICO: obtém visitas do backend e recarrega após salvar.
   // ============================================================
+  const loadHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      setHistoryError("");
+      const response = await api.get("/visits", { headers: authHeader() });
+      setVisitsHistory(getArrayResponse(response));
+    } catch (error) {
+      console.error("[NOVA VISITA] Erro ao consultar histórico:", error);
+      setHistoryError(error.response?.data?.message || "Não foi possível carregar o histórico de visitas.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!editVisit || !visit) return;
+    loadHistory();
+  }, [loadHistory]);
 
-    const initial = createInitialState();
+  // Reinicia a edição externa quando o dashboard seleciona outro registro.
+  useEffect(() => { setExternalEditDismissed(false); }, [editVisit, editTracking, visit]);
 
-    setForm({
-      ...initial,
+  // Compatibilidade com os dois formatos usados pelo dashboard.
+  useEffect(() => {
+    if (!isExternalEdit || !visit) return;
+    setEditingHistoryId(null);
+    setForm(fillFormFromVisit(visit, contracts));
+  }, [isExternalEdit, visit, contracts]);
 
-      // --------------------------------------------------------
-      // Identificação
-      // --------------------------------------------------------
+  // Permite pré-selecionar o CR quando o módulo recebe o filtro global.
+  useEffect(() => {
+    if (!contratoSelecionado || isEditing || form.contract_id) return;
+    const selected = contracts.find((c) =>
+      String(c.id) === String(contratoSelecionado) ||
+      contractCode(c).toLowerCase() === String(contratoSelecionado).toLowerCase(),
+    );
+    if (selected) setForm((old) => ({ ...old, contract_id: selected.id }));
+  }, [contratoSelecionado, contracts, isEditing, form.contract_id]);
 
-      contract_id: visit.contract_id || "",
-
-      visit_date: visit.visit_date
-        ? String(visit.visit_date).substring(0, 10)
-        : "",
-
-      employees_approached: visit.employees_approached ?? "",
-
-      // --------------------------------------------------------
-      // Indicadores
-      // --------------------------------------------------------
-
-      turnover: visit.turnover ?? "",
-      absenteeism: visit.absenteeism ?? "",
-      he_inefficiency: visit.he_inefficiency ?? "",
-      open_positions: visit.open_positions ?? "",
-      replacement_days: visit.replacement_days ?? "",
-      labor_actions: visit.labor_actions ?? 0,
-      warnings: visit.warnings ?? 0,
-      enps: visit.enps ?? 30,
-
-      // --------------------------------------------------------
-      // Pilares
-      // --------------------------------------------------------
-
-      leadership_presence: visit.leadership_presence ?? 0,
-
-      leadership_communication: visit.leadership_communication ?? 0,
-
-      leadership_routine: visit.leadership_routine ?? 0,
-
-      leadership_deviation: visit.leadership_deviation ?? 0,
-
-      climate_engagement: visit.climate_engagement ?? 0,
-
-      climate_listening: visit.climate_listening ?? 0,
-
-      climate_relationship: visit.climate_relationship ?? 0,
-
-      climate_satisfaction: visit.climate_satisfaction ?? 0,
-
-      structure_resources: visit.structure_resources ?? 0,
-
-      structure_staffing: visit.structure_staffing ?? 0,
-
-      structure_environment: visit.structure_environment ?? 0,
-
-      structure_support: visit.structure_support ?? 0,
-
-      customer_expectation: visit.customer_expectation ?? 0,
-
-      customer_communication: visit.customer_communication ?? 0,
-
-      customer_quality: visit.customer_quality ?? 0,
-
-      customer_requests: visit.customer_requests ?? 0,
-
-      // --------------------------------------------------------
-      // Qualitativo
-      // --------------------------------------------------------
-
-      root_cause: Array.isArray(visit.root_cause) ? visit.root_cause : [],
-
-      evidence: visit.evidence ?? "",
-
-      overview: visit.overview ?? "",
+  // Lista filtrada, mas preserva cada visita individualmente.
+  const historyFiltered = useMemo(() => {
+    const code = contractCode(contracts.find((c) => String(c.id) === String(form.contract_id)));
+    const search = historySearch.trim().toLocaleLowerCase("pt-BR");
+    return visitsHistory.filter((entry) => {
+      const matchesContract = !form.contract_id ||
+        String(entry.contract_id ?? "") === String(form.contract_id) ||
+        Boolean(code && visitCode(entry).toLowerCase() === code.toLowerCase());
+      if (!matchesContract) return false;
+      if (!search) return true;
+      const recordContract = contracts.find((c) => String(c.id) === String(entry.contract_id));
+      const searchable = [
+        contractCode(recordContract), visitCode(entry), entry.visit_date,
+        formatVisitDate(entry.visit_date), recordContract?.client,
+        entry.client, entry.evidence, entry.overview, entry.classification,
+        ...normalizeRootCause(entry.root_cause),
+      ].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+      return searchable.includes(search);
+    }).sort((a, b) => {
+      const dateA = String(a.visit_date ?? a.created_at ?? "");
+      const dateB = String(b.visit_date ?? b.created_at ?? "");
+      return dateB.localeCompare(dateA);
     });
-  }, [editVisit, visit]);
+  }, [visitsHistory, contracts, form.contract_id, historySearch]);
+
+  const historyVisible = useMemo(
+    () => historyFiltered.slice(0, visibleHistoryCount),
+    [historyFiltered, visibleHistoryCount],
+  );
+
+  useEffect(() => {
+    setVisibleHistoryCount(8);
+  }, [form.contract_id, historySearch]);
+
+  const startHistoryEdit = (entry) => {
+    if (loading) return;
+    if (entry.id === null || entry.id === undefined) return;
+    setExternalEditDismissed(true);
+    setEditingHistoryId(entry.id);
+    setForm(fillFormFromVisit(entry, contracts));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // ============================================================
   // ALTERAÇÃO DOS CAMPOS
@@ -291,15 +415,14 @@ export default function NovaVisita({
 
   const handleChange = ({ target }) => {
     const { name, value } = target;
-
+    const decimalFields = ["turnover", "absenteeism", "he_inefficiency", "replacement_days"];
     setForm((old) => ({
       ...old,
-
-      [name]: numericFields.includes(name)
-        ? value === ""
-          ? ""
-          : Number(value)
-        : value,
+      [name]: decimalFields.includes(name)
+        ? value
+        : numericFields.includes(name)
+          ? (value === "" ? "" : Number(value))
+          : value,
     }));
   };
 
@@ -423,7 +546,7 @@ export default function NovaVisita({
     // TURNOVER
     // ----------------------------------------------------------
 
-    const turnover = Number(form.turnover || 0);
+    const turnover = numberFromBR(form.turnover, 0);
 
     calc(
       turnover <= 3.5 ? 100 : turnover <= 7 ? 75 : turnover <= 11 ? 45 : 20,
@@ -434,7 +557,7 @@ export default function NovaVisita({
     // ABSENTEÍSMO
     // ----------------------------------------------------------
 
-    const absenteeism = Number(form.absenteeism || 0);
+    const absenteeism = numberFromBR(form.absenteeism, 0);
 
     calc(
       absenteeism <= 3.5
@@ -451,7 +574,7 @@ export default function NovaVisita({
     // H.E. INEFICIÊNCIA
     // ----------------------------------------------------------
 
-    const heInefficiency = Number(form.he_inefficiency || 0);
+    const heInefficiency = numberFromBR(form.he_inefficiency, 0);
 
     calc(
       heInefficiency <= 0
@@ -468,7 +591,7 @@ export default function NovaVisita({
     // AÇÕES TRABALHISTAS
     // ----------------------------------------------------------
 
-    const laborActions = Number(form.labor_actions || 0);
+    const laborActions = numberFromBR(form.labor_actions, 0);
 
     calc(
       laborActions === 0
@@ -485,7 +608,7 @@ export default function NovaVisita({
     // REPOSIÇÃO
     // ----------------------------------------------------------
 
-    const replacementDays = Number(form.replacement_days || 0);
+    const replacementDays = numberFromBR(form.replacement_days, 0);
 
     calc(
       replacementDays <= 12
@@ -564,8 +687,13 @@ export default function NovaVisita({
   // LIMPAR FORMULÁRIO
   // ============================================================
 
-  const limparFormulario = () => {
-    setForm(createInitialState());
+  const limparFormulario = (preserveContract = false) => {
+    setForm((old) => ({
+      ...createInitialState(),
+      contract_id: preserveContract ? old.contract_id : "",
+    }));
+    setEditingHistoryId(null);
+    setExternalEditDismissed(true);
   };
 
   // ============================================================
@@ -593,42 +721,31 @@ export default function NovaVisita({
   // ============================================================
 
   const buildPayload = () => {
+    const optionalNumericFields = [
+      "employees_approached", "turnover", "absenteeism", "he_inefficiency",
+      "open_positions", "replacement_days", "labor_actions", "warnings", "enps",
+    ];
+    const numericalValues = Object.fromEntries(
+      optionalNumericFields.map((key) => [key, numberFromBR(form[key], null)]),
+    );
+
     return {
       contract_id: form.contract_id,
-
       visit_date: form.visit_date,
-
-      employees_approached: Number(form.employees_approached || 0),
-
-      turnover: Number(form.turnover || 0),
-
-      absenteeism: Number(form.absenteeism || 0),
-
-      he_inefficiency: Number(form.he_inefficiency || 0),
-
-      open_positions: Number(form.open_positions || 0),
-
-      replacement_days: Number(form.replacement_days || 0),
-
-      labor_actions: Number(form.labor_actions || 0),
-
-      warnings: Number(form.warnings || 0),
-
-      enps: Number(form.enps || 0),
-
-      root_cause: Array.isArray(form.root_cause) ? form.root_cause : [],
-
+      ...numericalValues,
+      root_cause: normalizeRootCause(form.root_cause),
       evidence: form.evidence?.trim() || "",
-
       overview: form.overview?.trim() || "",
-
-      leadership_score: Number(leadershipScore || 0),
-
-      climate_score: Number(climateScore || 0),
-
-      structure_score: Number(structureScore || 0),
-
-      customer_score: Number(customerScore || 0),
+      leadership_score: leadershipScore,
+      climate_score: climateScore,
+      structure_score: structureScore,
+      customer_score: customerScore,
+      // Os campos de checklist de pilares são preservados na edição.
+      ...Object.fromEntries(
+        numericFields
+          .filter((key) => /^(leadership|climate|structure|customer)_/.test(key))
+          .map((key) => [key, numberFromBR(form[key], 0)]),
+      ),
     };
   };
 
@@ -643,61 +760,72 @@ export default function NovaVisita({
       alert("Selecione um contrato para lançar a visita.");
       return;
     }
-
     if (!form.visit_date) {
       alert("Informe a data da visita.");
       return;
     }
 
+    const payload = buildPayload();
+    const nonNegativeFields = [
+      "employees_approached", "turnover", "absenteeism", "he_inefficiency",
+      "open_positions", "replacement_days", "labor_actions", "warnings",
+    ];
+    if (nonNegativeFields.some((key) =>
+      payload[key] !== null && (!Number.isFinite(payload[key]) || payload[key] < 0)
+    ) || (payload.enps !== null && (!Number.isFinite(payload.enps) || payload.enps < -100 || payload.enps > 100))) {
+      alert("Confira os indicadores: informe números válidos (vírgula decimal permitida), sem valores negativos, e eNPS de -100 a 100.");
+      return;
+    }
+    if (["turnover", "absenteeism"].some((key) => payload[key] !== null && payload[key] > 100)) {
+      alert("Turnover e Absenteísmo devem ficar entre 0 e 100%.");
+      return;
+    }
+    if (["employees_approached", "open_positions", "labor_actions", "warnings"].some((key) =>
+      payload[key] !== null && !Number.isInteger(payload[key])
+    )) {
+      alert("Colaboradores, vagas, ações trabalhistas e advertências devem ser números inteiros.");
+      return;
+    }
+
+    let saveSucceeded = false;
     try {
       setLoading(true);
+      const config = { headers: authHeader() };
 
-      const payload = buildPayload();
-
-      console.log("[NOVA VISITA] Payload enviado:", payload);
-
-      // ========================================================
-      // EDIÇÃO
-      // ========================================================
-
-      if (editVisit) {
-        if (!visitId) {
-          throw new Error("ID da visita é obrigatório para edição.");
+      if (editingHistoryId !== null) {
+        await api.put(`/visits/${editingHistoryId}`, payload, config);
+      } else if (editTracking && !externalEditDismissed) {
+        // Integração já utilizada no fluxo Acompanhamento -> Nova Visita.
+        if (trackingId === null || trackingId === undefined) {
+          throw new Error("ID do acompanhamento é obrigatório para edição.");
         }
-
-        await api.put(`/visits/${visitId}`, payload, {
-          headers: authHeader(),
-        });
-
-        alert("Visita atualizada com sucesso.");
-
-        window.location.reload();
-
-        return;
+        await api.put(`/tracking/${trackingId}/edit`, payload, config);
+      } else if (editVisit && !externalEditDismissed) {
+        const editingId = visitId ?? visit?.id;
+        if (!editingId) throw new Error("ID da visita é obrigatório para edição.");
+        await api.put(`/visits/${editingId}`, payload, config);
+      } else {
+        await api.post("/visits", payload, config);
       }
 
-      // ========================================================
-      // CRIAÇÃO
-      // ========================================================
-
-      await api.post("/visits", payload, {
-        headers: authHeader(),
-      });
-
-      alert("Visita cadastrada com sucesso.");
-
-      limparFormulario();
+      saveSucceeded = true;
+      alert(isEditing ? "Visita atualizada com sucesso." : "Visita cadastrada com sucesso.");
+      limparFormulario(true);
     } catch (error) {
       console.error("[NOVA VISITA] Erro ao salvar:", error);
-
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Erro ao salvar visita.";
-
-      alert(message);
+      alert(error.response?.data?.message || error.message || "Erro ao salvar visita.");
     } finally {
       setLoading(false);
+    }
+
+    if (saveSucceeded) {
+      // Se a consulta ao histórico falhar, não informa que o salvamento falhou.
+      await loadHistory();
+      if (typeof onReload === "function") {
+        try { await onReload(); } catch (error) {
+          console.warn("[NOVA VISITA] Dados das outras abas não puderam ser atualizados:", error);
+        }
+      }
     }
   };
 
@@ -715,7 +843,7 @@ export default function NovaVisita({
         <div>
           <span className="eyebrow">COLETA DE CAMPO</span>
 
-          <h2>{editVisit ? "Editar Visita" : "Nova Visita"}</h2>
+          <h2>{isEditing ? "Editar Visita" : "Nova Visita"}</h2>
 
           <p>
             Registre as informações observadas durante a visita e gere o
@@ -825,12 +953,10 @@ export default function NovaVisita({
             <label>
               Turnover (%)
               <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                required
+                type="text"
+                inputMode="decimal"
                 name="turnover"
+                placeholder="Ex.: 3,5"
                 value={form.turnover}
                 onChange={handleChange}
               />
@@ -839,12 +965,10 @@ export default function NovaVisita({
             <label>
               Absenteísmo (%)
               <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                required
+                type="text"
+                inputMode="decimal"
                 name="absenteeism"
+                placeholder="Ex.: 3,5"
                 value={form.absenteeism}
                 onChange={handleChange}
               />
@@ -853,11 +977,10 @@ export default function NovaVisita({
             <label>
               H.E. Ineficiência (R$)
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                required
+                type="text"
+                inputMode="decimal"
                 name="he_inefficiency"
+                placeholder="Ex.: 1500,50"
                 value={form.he_inefficiency}
                 onChange={handleChange}
               />
@@ -868,7 +991,6 @@ export default function NovaVisita({
               <input
                 type="number"
                 min="0"
-                required
                 name="open_positions"
                 value={form.open_positions}
                 onChange={handleChange}
@@ -878,11 +1000,10 @@ export default function NovaVisita({
             <label>
               Tempo médio de reposição
               <input
-                type="number"
-                min="0"
-                step="0.1"
-                required
+                type="text"
+                inputMode="decimal"
                 name="replacement_days"
+                placeholder="Ex.: 15,5"
                 value={form.replacement_days}
                 onChange={handleChange}
               />
@@ -893,7 +1014,6 @@ export default function NovaVisita({
               <input
                 type="number"
                 min="0"
-                required
                 name="labor_actions"
                 value={form.labor_actions}
                 onChange={handleChange}
@@ -905,7 +1025,6 @@ export default function NovaVisita({
               <input
                 type="number"
                 min="0"
-                required
                 name="warnings"
                 value={form.warnings}
                 onChange={handleChange}
@@ -918,7 +1037,6 @@ export default function NovaVisita({
                 type="number"
                 min="-100"
                 max="100"
-                required
                 name="enps"
                 value={form.enps}
                 onChange={handleChange}
@@ -1280,7 +1398,6 @@ export default function NovaVisita({
               Evidências
               <textarea
                 rows="6"
-                required
                 name="evidence"
                 value={form.evidence}
                 onChange={handleChange}
@@ -1384,16 +1501,14 @@ export default function NovaVisita({
         ==================================================== */}
 
         <div className="nv-actions">
-          {!editVisit && (
-            <button
-              type="button"
-              className="secondary"
-              onClick={limparFormulario}
-              disabled={loading}
-            >
-              Limpar formulário
-            </button>
-          )}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => limparFormulario()}
+            disabled={loading}
+          >
+            {isEditing ? "Cancelar edição / Limpar" : "Limpar formulário"}
+          </button>
 
           <button
             type="submit"
@@ -1402,12 +1517,142 @@ export default function NovaVisita({
           >
             {loading
               ? "Salvando..."
-              : editVisit
+              : isEditing
                 ? "Atualizar Visita"
                 : "Salvar Visita"}
           </button>
         </div>
       </form>
+
+      {/* ============================================================
+          HISTÓRICO DE VISITAS — ao final da aba Nova Visita
+          Contém todos os registros retornados por GET /visits.
+      ============================================================ */}
+      <section className="nv-history nv-card" aria-label="Histórico de visitas">
+        <div className="nv-history-header">
+          <div>
+            <span className="eyebrow">REGISTROS DA OPERAÇÃO</span>
+            <h3>Histórico de visitas</h3>
+            <p>
+              {form.contract_id
+                ? `Visitas registradas para o contrato ${contractCode(selectedContract) || "selecionado"}.`
+                : "Selecione um contrato no formulário para filtrar, ou consulte todas as visitas."}
+            </p>
+          </div>
+          <span className="nv-history-counter">
+            {historyFiltered.length} {historyFiltered.length === 1 ? "visita" : "visitas"}
+          </span>
+        </div>
+
+        <div className="nv-history-toolbar">
+          <label className="nv-history-search-label">
+            Buscar no histórico
+            <input
+              type="search"
+              value={historySearch}
+              onChange={(event) => setHistorySearch(event.target.value)}
+              placeholder="Pesquisar CR, data, causas, evidências..."
+            />
+          </label>
+          <button
+            className="nv-history-refresh"
+            type="button"
+            onClick={loadHistory}
+            disabled={historyLoading}
+          >
+            {historyLoading ? "Atualizando..." : "Atualizar histórico"}
+          </button>
+        </div>
+
+        {historyError && (
+          <div className="nv-history-error" role="alert">
+            {historyError}
+            <button type="button" onClick={loadHistory}>Tentar novamente</button>
+          </div>
+        )}
+
+        {historyLoading && visitsHistory.length === 0 ? (
+          <p className="nv-history-empty">Carregando visitas...</p>
+        ) : historyFiltered.length === 0 ? (
+          <p className="nv-history-empty">
+            Nenhuma visita encontrada {form.contract_id ? "para este contrato" : "com os filtros informados"}.
+          </p>
+        ) : (
+          <div className="nv-history-list">
+            {historyVisible.map((entry, index) => {
+              const contract = contracts.find((item) => String(item.id) === String(entry.contract_id));
+              const cr = contractCode(contract) || visitCode(entry) || "CR não informado";
+              const causes = normalizeRootCause(entry.root_cause);
+              const key = entry.id ?? `${entry.contract_id || cr}-${entry.visit_date}-${index}`;
+              return (
+                <details className="nv-history-record" key={key}>
+                  <summary className="nv-history-record-heading">
+                    <div className="nv-history-date">
+                      <strong>{formatVisitDate(entry.visit_date)}</strong>
+                      <span>{cr}</span>
+                    </div>
+                    <div className="nv-history-record-main">
+                      <strong>{contract?.client || entry.client || "Visita registrada"}</strong>
+                      <small>{causes.length ? `Causa-raiz: ${causes.join(", ")}` : "Sem causa-raiz registrada"}</small>
+                    </div>
+                    <span className="nv-history-classification">
+                      {entry.classification || "Registrada"}
+                    </span>
+                    <span className="nv-history-chevron" aria-hidden="true">⌄</span>
+                  </summary>
+
+                  <div className="nv-history-details">
+                    <p className="nv-history-intro">
+                      Informações documentadas nesta visita (dados registrados na data indicada acima).
+                    </p>
+                    {HISTORICAL_GROUPS.map((group) => {
+                      const available = group.fields.filter(([, field]) =>
+                        entry[field] !== null && entry[field] !== undefined &&
+                        entry[field] !== "" &&
+                        (!Array.isArray(entry[field]) || entry[field].length > 0)
+                      );
+                      if (!available.length) return null;
+                      return (
+                        <section className="nv-history-detail-group" key={group.title}>
+                          <h4>{group.title}</h4>
+                          <dl className="nv-history-detail-grid">
+                            {available.map(([label, field, format]) => (
+                              <div className={field === "evidence" || field === "overview" ? "nv-history-wide" : ""} key={field}>
+                                <dt>{label}</dt>
+                                <dd>{formatHistoryValue(entry[field], format)}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </section>
+                      );
+                    })}
+                    {entry.id !== null && entry.id !== undefined && (
+                      <div className="nv-history-record-actions">
+                        <button
+                          type="button"
+                          onClick={() => startHistoryEdit(entry)}
+                          disabled={loading}
+                        >
+                          Editar esta visita
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
+            {historyFiltered.length > visibleHistoryCount && (
+              <button
+                type="button"
+                className="nv-history-more"
+                onClick={() => setVisibleHistoryCount((old) => old + 8)}
+              >
+                Mostrar mais visitas ({historyFiltered.length - visibleHistoryCount} restantes)
+              </button>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
