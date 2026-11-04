@@ -9,7 +9,7 @@ const EVENT_START = "2026-11-09T10:00"; // início do evento (contagem regressiv
 // Endpoint que recebe as melhorias (POST JSON). Use "" para apenas simular o envio.
 const SUBMIT_URL = "/api/melhorias";
 
-const ROOM = "Auditório Grupo GPS";
+const ROOM = "Teams";
 const QUALIDADE = "Yasmin / Amanda";
 const PROJETOS = "Enzo / Ana";
 
