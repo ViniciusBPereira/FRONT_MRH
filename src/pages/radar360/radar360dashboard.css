@@ -1005,4 +1005,412 @@
   .timeline-right {
     align-items: flex-start;
   }
+}/* Estilos exclusivos da aba "Visão Geral".
+   Mantém o CSS e a identidade visual atuais das demais abas. */
+
+.overview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  width: 100%;
+}
+
+.overview-content .panel {
+  min-width: 0;
+}
+
+.overview-top-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.overview-number-card {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(120, 140, 170, 0.24);
+  background: rgba(120, 140, 170, 0.06);
+}
+
+.overview-number-card > span,
+.overview-small-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+.overview-number-card strong {
+  font-size: clamp(1.6rem, 2.8vw, 2.3rem);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-number-card small,
+.overview-footnote {
+  font-size: 0.79rem;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.overview-content .overview-footnote { margin: 12px 0 0; }
+
+.overview-contract-panel .panel-header,
+.overview-plan-panel .panel-header {
+  align-items: center;
+  gap: 12px;
+}
+
+.overview-text-button {
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.08);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  padding: 9px 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.overview-text-button:hover {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(59, 130, 246, 0.65);
+}
+
+.overview-text-button:focus-visible,
+.overview-period-control button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.overview-selected-contract {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.9fr) minmax(0, 2fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.overview-selected-contract > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.overview-status-tag {
+  display: inline-block;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(110, 120, 130, 0.12);
+  border: 1px solid rgba(110, 120, 130, 0.25);
+}
+
+.overview-status-em-acompanhamento {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.24);
+}
+.overview-status-standby {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.overview-status-encerrado {
+  color: #475569;
+  background: rgba(100, 116, 139, 0.1);
+  border-color: rgba(100, 116, 139, 0.24);
+}
+
+.overview-contract-note { min-width: 0; }
+.overview-contract-note p {
+  margin: 0;
+  max-width: 100%;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.overview-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overview-status-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid rgba(120, 140, 170, 0.16);
+  border-radius: 12px;
+  background: rgba(120, 140, 170, 0.055);
+}
+
+.overview-status-stat span { font-size: 0.83rem; opacity: 0.83; }
+.overview-status-stat strong { font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+.overview-status-stat.active { border-left: 4px solid #16a34a; }
+.overview-status-stat.paused { border-left: 4px solid #d97706; }
+.overview-status-stat.closed { border-left: 4px solid #64748b; }
+
+.overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.overview-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.overview-section-heading h2 { margin: 4px 0 5px; }
+.overview-section-heading p {
+  margin: 0;
+  font-size: 0.82rem;
+  opacity: 0.76;
+  line-height: 1.5;
+}
+
+.overview-period-control {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid rgba(120, 140, 170, 0.22);
+  border-radius: 12px;
+}
+
+.overview-period-control button {
+  padding: 8px 13px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.overview-period-control button.selected {
+  background: #2563eb;
+  color: #fff;
+}
+
+.overview-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.overview-chart-card { min-width: 0; }
+.overview-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.overview-chart-header > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.overview-metric-name {
+  font-weight: 650;
+  font-size: 0.9rem;
+}
+.overview-chart-header strong {
+  color: var(--overview-indicator-color);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  line-height: 1.2;
+}
+.overview-chart-header small {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.overview-trend-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  margin-top: 8px;
+}
+.overview-axis-label {
+  fill: currentColor;
+  opacity: 0.72;
+  font-size: 11px;
+  font-family: inherit;
+}
+.overview-chart-empty {
+  padding: 48px 12px;
+  font-size: 0.86rem;
+  text-align: center;
+  opacity: 0.72;
+}
+
+.overview-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+}
+.overview-cause-item + .overview-cause-item { margin-top: 17px; }
+.overview-cause-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+.overview-cause-line span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.overview-cause-line strong {
+  flex-shrink: 0;
+  font-size: 0.79rem;
+}
+.overview-cause-track {
+  background: rgba(120, 140, 170, 0.14);
+  border-radius: 100px;
+  height: 8px;
+  overflow: hidden;
+}
+.overview-cause-track > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #d97706;
+}
+
+.overview-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.overview-plan-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px 10px;
+  border-radius: 12px;
+  background: rgba(120, 140, 170, 0.07);
+  text-align: center;
+  border-top: 3px solid #64748b;
+}
+.overview-plan-stat.complete { border-top-color: #16a34a; }
+.overview-plan-stat.execution { border-top-color: #2563eb; }
+.overview-plan-stat.pending { border-top-color: #d97706; }
+.overview-plan-stat span { font-size: 0.77rem; }
+.overview-plan-stat strong { font-size: 1.8rem; font-variant-numeric: tabular-nums; }
+.overview-plan-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 16px 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(120, 140, 170, 0.18);
+  font-size: 0.85rem;
+}
+.overview-plan-total strong { font-size: 1.15rem; }
+.overview-plan-panel .overview-text-button { width: 100%; }
+.overview-timeline-panel { margin-bottom: 2px; }
+
+@media (max-width: 1024px) {
+  .overview-lower-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 740px) {
+  .overview-charts-grid,
+  .overview-selected-contract { grid-template-columns: 1fr; }
+  .overview-section-heading { flex-wrap: wrap; align-items: flex-start; }
+  .overview-chart-header { flex-wrap: wrap; }
+}
+@media (max-width: 520px) {
+  .overview-top-summary,
+  .overview-status-grid,
+  .overview-plan-grid { grid-template-columns: 1fr; }
+  .overview-plan-grid { gap: 8px; }
+  .overview-plan-stat { flex-direction: row; justify-content: space-between; align-items: center; }
+  .overview-contract-panel .panel-header { flex-wrap: wrap; }
+  .overview-content { gap: 16px; }
+}
+
+/* ============================================================
+   BLOCOS EXECUTIVOS: STATUS + SAÚDE POR CONTRATO
+============================================================ */
+.overview-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.overview-health-description {
+  margin: -6px 0 18px;
+  color: #768295;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.overview-health-list {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.overview-health-row {
+  display: grid;
+  grid-template-columns: 9px 72px minmax(0, 1fr) 25px;
+  gap: 9px;
+  align-items: center;
+  font-size: 12px;
+  color: #586579;
+}
+.overview-health-row strong {
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #243145;
+}
+.overview-health-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.overview-health-track {
+  overflow: hidden;
+  height: 7px;
+  border-radius: 99px;
+  background: #eef1f4;
+}
+.overview-health-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #94a3b8;
+}
+.overview-health-dot.critical, .overview-health-fill.critical { background: #c24d4d; }
+.overview-health-dot.alert, .overview-health-fill.alert { background: #d99b32; }
+.overview-health-dot.stable, .overview-health-fill.stable { background: #6687ac; }
+.overview-health-dot.reference, .overview-health-fill.reference { background: #38906c; }
+
+@media (max-width: 1024px) {
+  .overview-context-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .overview-health-row { grid-template-columns: 9px 67px minmax(0, 1fr) 22px; gap: 7px; }
 }
