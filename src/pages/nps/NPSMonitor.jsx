@@ -7,7 +7,12 @@ import "./npsmonitor.css";
 const EVENT_NAME = "Semana da Qualidade";
 const EVENT_START = "2026-11-09T10:00"; // início do evento (contagem regressiva). Use null para mostrar "A definir"
 // Endpoint que recebe as melhorias (POST JSON). Use "" para apenas simular o envio.
-const SUBMIT_URL = `${import.meta.env.VITE_API_BASE}/melhorias`;
+const API_BASE = (
+  import.meta.env.VITE_API_BASE ||
+  "https://api-info.xyz/api"
+).replace(/\/+$/, "");
+
+const SUBMIT_URL = `${API_BASE}/melhorias`;
 
 const ROOM = "Teams";
 const QUALIDADE = "Yasmin / Amanda";
