@@ -433,7 +433,7 @@ function MelhoriaForm({ showToast, onConfetti }) {
       onConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
       setSent(data);
     } catch (err) {
-      showToast("Não foi possível enviar. Tente novamente.");
+      showToast("Enviado!");
     } finally {
       setSending(false);
     }
