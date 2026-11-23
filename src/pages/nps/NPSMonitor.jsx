@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiArrowRight, FiCheck, FiCheckCircle, FiClock, FiDownload, FiEdit2,
-  FiFileText, FiFilter, FiInfo, FiMaximize2, FiMessageCircle,
+  FiFileText, FiFilter, FiInfo, FiMaximize2, FiMinimize2, FiMessageCircle,
   FiPlus, FiRefreshCw, FiSearch, FiSettings, FiTrash2,
   FiUploadCloud, FiUserCheck, FiUsers, FiX,
 } from 'react-icons/fi';
@@ -262,8 +262,13 @@ export default function NPSMonitor() {
   const [view,setView]=useState('recepcao'), [query,setQuery]=useState(''), [focusQuery,setFocusQuery]=useState('');
   const [group,setGroup]=useState('todos'), [status,setStatus]=useState('todos'), [sort,setSort]=useState('pendentes');
   const [dialog,setDialog]=useState(null), [focus,setFocus]=useState(false), [success,setSuccess]=useState(null), [toast,setToast]=useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenTip, setFullscreenTip] = useState('');
   const [eventName,setEventName]=useState('');
   const busyRef=useRef(false), toastTimeout=useRef(null), searchRef=useRef(null),focusRef=useRef(null),revision=useRef(0);
+  const rootRef = useRef(null);
+  const fullscreenStartedByFocus = useRef(false);
+  const keepFocusWhenExitingFullscreen = useRef(false);
   const notify=useCallback(message=>{setToast(message);clearTimeout(toastTimeout.current);toastTimeout.current=setTimeout(()=>setToast(''),4200);},[]);
   const reload=useCallback(async (quiet=false)=>{
     if(busyRef.current)return;
@@ -277,9 +282,115 @@ export default function NPSMonitor() {
     const ticker=setInterval(()=>reload(true),POLL_MS);
     return()=>{document.body.classList.remove('hide-sidebar');clearInterval(ticker);clearTimeout(toastTimeout.current);};
   },[reload]);
+  // A Fullscreen API precisa ser disparada diretamente pelo clique do usuário,
+  // antes de qualquer await ou mudança de tela. Não equivale a um F11 forçado:
+  // navegadores como o Safari no iPhone podem impedir tela cheia real.
+  function currentFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function fullscreenUnavailableMessage() {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      ? 'No iPhone, o Safari pode não permitir tela cheia nesta página. Para ocultar a barra do navegador, abra pelo Safari, toque em Compartilhar e escolha Adicionar à Tela de Início.'
+      : 'Este navegador não permitiu tela cheia. O Modo Foco continua funcionando dentro da área disponível da tela.';
+  }
+
+  function requestFocusFullscreen() {
+    const el = rootRef.current;
+    const request = el?.requestFullscreen || el?.webkitRequestFullscreen;
+    if (typeof request !== 'function') {
+      setFullscreenTip(fullscreenUnavailableMessage());
+      return;
+    }
+
+    // Marcar antes da solicitação para também detectar saída pelo botão Voltar/Esc.
+    fullscreenStartedByFocus.current = true;
+    try {
+      const promise = request.call(el, { navigationUI: 'hide' });
+      Promise.resolve(promise).catch(() => {
+        fullscreenStartedByFocus.current = false;
+        setFullscreenTip(fullscreenUnavailableMessage());
+      });
+    } catch {
+      fullscreenStartedByFocus.current = false;
+      setFullscreenTip(fullscreenUnavailableMessage());
+    }
+  }
+
+  function enterFocus() {
+    setFocusQuery('');
+    setFullscreenTip('');
+    // CHAMAR ANTES de setState/timeout para preservar a ativação do toque.
+    requestFocusFullscreen();
+    setFocus(true);
+    window.setTimeout(() => focusRef.current?.focus(), 90);
+  }
+
+  function closeFocus() {
+    setFocus(false);
+    setFullscreenTip('');
+    fullscreenStartedByFocus.current = false;
+    keepFocusWhenExitingFullscreen.current = false;
+    if (currentFullscreenElement() === rootRef.current) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (typeof exit === 'function') {
+        try { Promise.resolve(exit.call(document)).catch(() => {}); } catch { /* sem suporte */ }
+      }
+    }
+  }
+
+  function toggleFullscreenInFocus() {
+    if (currentFullscreenElement() === rootRef.current) {
+      // Permite desligar apenas a tela cheia, sem encerrar o Modo Foco.
+      keepFocusWhenExitingFullscreen.current = true;
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (typeof exit === 'function') {
+        try {
+          Promise.resolve(exit.call(document)).catch(() => {
+            keepFocusWhenExitingFullscreen.current = false;
+          });
+        } catch { keepFocusWhenExitingFullscreen.current = false; }
+      }
+    } else {
+      setFullscreenTip('');
+      requestFocusFullscreen();
+    }
+  }
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      const active = currentFullscreenElement() === rootRef.current;
+      setIsFullscreen(active);
+      if (active) {
+        setFullscreenTip('');
+      } else if (fullscreenStartedByFocus.current) {
+        fullscreenStartedByFocus.current = false;
+        if (keepFocusWhenExitingFullscreen.current) {
+          keepFocusWhenExitingFullscreen.current = false;
+        } else {
+          // Esc, Voltar ou gesto do sistema saem também do Modo Foco.
+          setFocus(false);
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    document.addEventListener('webkitfullscreenchange', syncFullscreen);
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreen);
+      document.removeEventListener('webkitfullscreenchange', syncFullscreen);
+    };
+  }, []);
+
   useEffect(()=>{
-    const key=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();focus?focusRef.current?.focus():searchRef.current?.focus();}if(e.key==='Escape'&&focus)setFocus(false);};
-    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
+    const key=e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
+        e.preventDefault();
+        focus ? focusRef.current?.focus() : searchRef.current?.focus();
+      }
+      if(e.key==='Escape'&&focus) closeFocus();
+    };
+    window.addEventListener('keydown',key);
+    return()=>window.removeEventListener('keydown',key);
   },[focus]);
   const guests=data.guests||[],managers=data.managers||[];
   const byManager=useMemo(()=>Object.fromEntries(managers.map(m=>[m.id,m])),[managers]);
@@ -309,15 +420,48 @@ export default function NPSMonitor() {
   async function saveManager(m){const source=dialog?.source;const result=await mutate(source?'editarGerente':'adicionarGerente',source?{...m,id:source.id}:m);if(result){setDialog({type:'managers'});notify('Gerente salvo.');}}
   function removeManager(m){setDialog({type:'confirm',title:'Excluir gerente?',message:`Remover ${m.name}? Não será permitido se existirem convidados vinculados.`,button:'Excluir gerente',danger:true,confirm:async()=>{if(await mutate('excluirGerente',{id:m.id})){setDialog({type:'managers'});notify('Gerente removido.');}}});}
   async function importGuests(rows){const result=await mutate('importarConvidadosPlanilha',{guests:rows});if(result){close();notify(`${result.added} convidados importados · ${result.skipped} ignorados · ${result.managersAdded} gerentes novos.`);setView('lista');}}
-  function whatsapp(g){
-    const m=byManager[g.managerId];
-    if(!g.arrivedAt)return notify('Confirme a presença primeiro.');
-    if(!m?.verified||!/^\d{12,15}$/.test(toPhone(m.phone)))return notify('Valide o número do gerente antes de notificar.');
-    const msg=`GRUPO GPS | CHECK-IN\n\nOlá, ${m.name}!\n\nO cliente ${g.name}, da empresa ${g.clientGroup||g.detail||'não informada'}, chegou ao evento ${data.eventTitle||'Grupo GPS'} às ${hhmm(g.arrivedAt)}.\n\nRecepção Grupo GPS.`;
-    const phone=toPhone(m.phone), mobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
-    const url=mobile?`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`:`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`;
-    window.open(url,'_blank','noopener,noreferrer');
-    api('registrarWhatsappAberto',{id:g.id}).catch(()=>{});setSuccess(null);notify('Conversa aberta. Clique em Enviar no WhatsApp.');
+  /* ============================================================
+     WHATSAPP MULTIUSUÁRIO
+
+     O link abre no dispositivo de QUEM CLICOU (recepcionista).
+     O gerente continua sendo o DESTINATÁRIO, pelo telefone cadastrado.
+
+     wa.me é um link universal: em outro computador, a conta utilizada
+     será a que estiver conectada ao WhatsApp daquele dispositivo/navegador.
+     Não existe envio automático nem escolha de remetente pelo servidor.
+     ============================================================ */
+  function whatsapp(g) {
+    const gerente = byManager[g.managerId];
+
+    if (!g.arrivedAt) {
+      notify('Confirme a presença antes de abrir o WhatsApp.');
+      return;
+    }
+
+    const telefone = toPhone(gerente?.phone);
+    if (!gerente?.verified || !/^\d{12,15}$/.test(telefone)) {
+      notify('Confira e valide o telefone do gerente antes de abrir o WhatsApp.');
+      return;
+    }
+
+    const mensagem =
+      `GRUPO GPS | CHECK-IN\n\n` +
+      `Olá, ${gerente.name}!\n\n` +
+      `O cliente ${g.name}, da empresa ${g.clientGroup || g.detail || 'não informada'}, ` +
+      `chegou ao evento ${data.eventTitle || 'Grupo GPS'} às ${hhmm(g.arrivedAt)}.\n\n` +
+      `Recepção Grupo GPS.`;
+
+    // Não força web.whatsapp.com nem vincula uma conta específica.
+    // WhatsApp resolve a abertura no Web/app do computador ou celular atual.
+    const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
+
+    // A abertura precisa ocorrer diretamente no clique para evitar bloqueio de popup.
+    window.open(url, '_blank', 'noopener,noreferrer');
+
+    // Este registro indica ABERTURA da conversa, não envio da mensagem.
+    api('registrarWhatsappAberto', { id: g.id }).catch(() => {});
+    setSuccess(null);
+    notify('WhatsApp aberto neste dispositivo. Confira a conta e clique em Enviar.');
   }
   function exportCSV(){
     const cols=[['Nome','Categoria','Empresa / Área','Gerente','Presença','Chegada']];
@@ -335,14 +479,14 @@ export default function NPSMonitor() {
     <div className="gpsr-person-commands"><button type="button" className={`gpsr-check ${g.arrivedAt?'done':''}`} disabled={busy} onClick={()=>checkin(g)}>{g.arrivedAt?<><FiRefreshCw/> Desfazer</>:<><FiCheck/> Confirmar</>}</button>{g.arrivedAt&&<small>Às {hhmm(g.arrivedAt)}</small>}{canWa(g)&&<button type="button" className="gpsr-wa" onClick={()=>whatsapp(g)}><FiMessageCircle/> WhatsApp</button>}{!small&&<div className="gpsr-mini-actions"><button type="button" title="Editar convidado" aria-label={`Editar ${g.name}`} onClick={()=>setDialog({type:'guest',source:g})}><FiEdit2/></button><button type="button" title="Excluir convidado" aria-label={`Excluir ${g.name}`} onClick={()=>removeGuest(g)}><FiTrash2/></button></div>}</div>
   </article>;
 
-  return <div className="gpsr-root gpsr-layout-v4"><Sky/><div className="gpsr-shell">
+  return <div ref={rootRef} className="gpsr-root gpsr-layout-v4"><Sky/><div className="gpsr-shell">
     <header className="gpsr-top"><div className="gpsr-brand"><i/> GRUPO GPS <span>· RECEPÇÃO</span></div><nav className="gpsr-nav" aria-label="Navegação"><button type="button" className={view==='recepcao'?'active':''} onClick={()=>setView('recepcao')}>Recepção</button><button type="button" className={view==='lista'?'active':''} onClick={()=>setView('lista')}>Lista</button><button type="button" className={view==='gerentes'?'active':''} onClick={()=>setView('gerentes')}>Gerentes</button></nav><div className="gpsr-top-actions"><button type="button" title="Atualizar" aria-label="Atualizar" onClick={()=>reload()}><FiRefreshCw/></button><button type="button" title="Configurações" aria-label="Configurações" onClick={()=>{setEventName(data.eventTitle);setDialog({type:'settings'});}}><FiSettings/></button></div></header>
     <main className="gpsr-main">
       <div className="gpsr-heading"><div><span className="gpsr-eyebrow">LISTA DE PRESENÇA</span><h1>{data.eventTitle||'Evento Grupo GPS'}</h1><p>Controle de entrada em tempo real</p></div><div className="gpsr-header-buttons"><button type="button" className="gpsr-btn ghost" onClick={()=>setDialog({type:'import'})}><FiUploadCloud/> Importar Excel</button><button type="button" className="gpsr-btn primary" onClick={()=>setDialog({type:'guest',source:null})}><FiPlus/> Adicionar nome</button></div></div>
       {error&&<div className="gpsr-alert"><FiInfo/><span><b>Falha na sincronização.</b> {error}</span><button type="button" onClick={()=>reload()}>Tentar novamente</button></div>}
       {!loaded&&<div className="gpsr-loading">Carregando convidados do servidor...</div>}
       <section className="gpsr-metrics" aria-label="Indicadores"><div><FiUsers/><span><strong>{guests.length}</strong><small>Convidados</small></span></div><div><FiUserCheck/><span><strong>{present}</strong><small>Presentes</small></span></div><div><FiClock/><span><strong>{pending}</strong><small>Pendentes</small></span></div><div className="gpsr-percent"><strong>{percent}%</strong><span>de presença</span><i><em style={{width:`${percent}%`}}/></i></div></section>
-      {view==='recepcao'&&<><section className="gpsr-quick"><div className="gpsr-card-head gpsr-card-head--action"><div className="gpsr-card-title"><span className="gpsr-eyebrow">CHECK-IN EXPRESSO</span><h2>Localizar participante</h2></div><div className="gpsr-card-action"><button className="gpsr-icon-outline" type="button" onClick={()=>{setFocus(true);setFocusQuery('');setTimeout(()=>focusRef.current?.focus(),50);}} title="Modo foco"><FiMaximize2/> <span>Modo foco</span></button></div></div><div className="gpsr-card-body"><div className="gpsr-search"><FiSearch/><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nome, empresa ou gerente..."/></div><div className="gpsr-filter-inline"><span>FILTRAR</span>{[['todos','Todos'],['cliente','Clientes'],['interno','Internos']].map(([v,l])=><button type="button" key={v} className={group===v?'selected':''} onClick={()=>setGroup(v)}>{l}</button>)}</div><div className="gpsr-result-caption"><strong>RESULTADOS</strong><span>{filtered.length} encontrados</span></div><div className="gpsr-quick-results">{quick.map(g=>row(g,true))}{!quick.length&&<div className="gpsr-empty">Nenhum participante encontrado.</div>}</div></div><div className="gpsr-card-footer"><span>Busque e confirme em um toque.</span><button type="button" onClick={()=>setView('lista')}>Ver lista completa <FiArrowRight/></button></div></section></>}
+      {view==='recepcao'&&<><section className="gpsr-quick"><div className="gpsr-card-head gpsr-card-head--action"><div className="gpsr-card-title"><span className="gpsr-eyebrow">CHECK-IN EXPRESSO</span><h2>Localizar participante</h2></div><div className="gpsr-card-action"><button className="gpsr-icon-outline" type="button" onClick={enterFocus} title="Modo foco em tela cheia"><FiMaximize2/> <span>Modo foco</span></button></div></div><div className="gpsr-card-body"><div className="gpsr-search"><FiSearch/><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nome, empresa ou gerente..."/></div><div className="gpsr-filter-inline"><span>FILTRAR</span>{[['todos','Todos'],['cliente','Clientes'],['interno','Internos']].map(([v,l])=><button type="button" key={v} className={group===v?'selected':''} onClick={()=>setGroup(v)}>{l}</button>)}</div><div className="gpsr-result-caption"><strong>RESULTADOS</strong><span>{filtered.length} encontrados</span></div><div className="gpsr-quick-results">{quick.map(g=>row(g,true))}{!quick.length&&<div className="gpsr-empty">Nenhum participante encontrado.</div>}</div></div><div className="gpsr-card-footer"><span>Busque e confirme em um toque.</span><button type="button" onClick={()=>setView('lista')}>Ver lista completa <FiArrowRight/></button></div></section></>}
       {view==='lista'&&<div className="gpsr-workspace"><section className="gpsr-roster"><div className="gpsr-card-head gpsr-card-head--action"><div className="gpsr-card-title"><span className="gpsr-eyebrow">CONVIDADOS</span><h2>Lista completa <b>{filtered.length}</b></h2></div><div className="gpsr-card-action"><button className="gpsr-icon-outline" type="button" onClick={exportCSV}><FiDownload/> <span>Exportar CSV</span></button></div></div><div className="gpsr-roster-tools"><div className="gpsr-search"><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Pesquisar convidado..."/></div><select aria-label="Ordenar" value={sort} onChange={e=>setSort(e.target.value)}><option value="pendentes">Pendentes primeiro</option><option value="az">Nome A–Z</option><option value="recent">Últimas chegadas</option></select></div><div className="gpsr-filters"><div className="gpsr-status-tabs">{[['todos','Todos'],['pendentes','Aguardando'],['presentes','Presentes']].map(([v,l])=><button type="button" key={v} className={status===v?'selected':''} onClick={()=>setStatus(v)}>{l}</button>)}</div><div className="gpsr-group-tabs">{[['todos','Todos'],['cliente','Clientes'],['interno','Internos']].map(([v,l])=><button type="button" key={v} className={group===v?'selected':''} onClick={()=>setGroup(v)}>{l}</button>)}</div></div><div className="gpsr-table-head"><span>PARTICIPANTE</span><span>TIPO</span><span>CHECK-IN / AÇÕES</span></div><div className="gpsr-list">{filtered.map(g=>row(g))}{!filtered.length&&<div className="gpsr-empty">Não há convidados para este filtro.</div>}</div><div className="gpsr-card-footer"><span>{filtered.length} de {guests.length} convidados</span><button type="button" onClick={()=>setDialog({type:'guest',source:null})}>Adicionar nome <FiPlus/></button></div></section>
       <aside className="gpsr-activity"><div className="gpsr-card-head"><div><span className="gpsr-eyebrow">AO VIVO</span><h2>Últimas chegadas</h2></div><span className="gpsr-live"><i/> LIVE</span></div><div className="gpsr-activity-body">{recent.length?recent.map(g=><div className="gpsr-arrival" key={g.id}>{avatar(g)}<span><strong>{g.name}</strong><small>{g.group==='cliente'?'Cliente':'Interno'} · Presença confirmada</small></span><time>{hhmm(g.arrivedAt)}</time></div>):<div className="gpsr-empty">Nenhum check-in realizado ainda.</div>}</div></aside></div>}
       {view==='gerentes'&&<section className="gpsr-roster gpsr-managers-panel"><div className="gpsr-card-head gpsr-card-head--action"><div className="gpsr-card-title"><span className="gpsr-eyebrow">VÍNCULOS COM CLIENTES</span><h2>Gerentes responsáveis</h2></div><div className="gpsr-card-action"><button className="gpsr-btn primary" type="button" onClick={()=>setDialog({type:'manager',source:null})}><FiPlus/> Novo gerente</button></div></div><div className="gpsr-manager-list">{managers.map(m=><article key={m.id} className="gpsr-manager"><span className="gpsr-manager-icon"><FiUsers/></span><div><strong>{m.name}</strong><small>{m.phone||'Sem telefone'} · {m.verified?'Telefone validado':'Pendente de validação'}</small><small>{guests.filter(g=>g.managerId===m.id).length} clientes vinculados</small></div><div className="gpsr-mini-actions"><button title="Editar gerente" type="button" onClick={()=>setDialog({type:'manager',source:m})}><FiEdit2/></button><button title="Excluir gerente" type="button" onClick={()=>removeManager(m)}><FiTrash2/></button></div></article>)}{!managers.length&&<div className="gpsr-empty">Nenhum gerente cadastrado.</div>}</div></section>}
@@ -354,8 +498,8 @@ export default function NPSMonitor() {
     {dialog?.type==='import'&&<Overlay title="Importar convidados" eyebrow="PLANILHA EXCEL / CSV" large close={close}><ImportSheet busy={busy} onImport={importGuests} close={close}/></Overlay>}
     {dialog?.type==='settings'&&<Overlay title="Configurações do evento" eyebrow="PREFERÊNCIAS" close={close}><form className="gpsr-form" onSubmit={async e=>{e.preventDefault();if(await mutate('editarEvento',{eventTitle:eventName})){close();notify('Evento atualizado.');}}}><label>Nome do evento<input required maxLength={90} value={eventName} onChange={e=>setEventName(e.target.value)}/></label><div className="gpsr-modal-actions"><button type="submit" className="gpsr-btn primary" disabled={busy}>Salvar nome</button><button type="button" className="gpsr-btn ghost" onClick={exportCSV}>Exportar CSV</button></div></form></Overlay>}
     {dialog?.type==='confirm'&&<Overlay title={dialog.title} eyebrow="CONFIRMAÇÃO" close={close}><p className="gpsr-confirm-copy">{dialog.message}</p><div className="gpsr-modal-actions"><button className="gpsr-btn ghost" type="button" onClick={close}>Cancelar</button><button className={`gpsr-btn ${dialog.danger?'danger':'primary'}`} type="button" disabled={busy} onClick={dialog.confirm}>{busy?'Salvando...':dialog.button}</button></div></Overlay>}
-    {success&&<div className="gpsr-success-mask" role="dialog" aria-modal="true" aria-label="Check-in confirmado"><div className="gpsr-success"><button type="button" className="gpsr-square" aria-label="Fechar" onClick={()=>setSuccess(null)}><FiX/></button><span className="gpsr-success-symbol"><FiCheck/></span><span className="gpsr-eyebrow">CHECK-IN CONFIRMADO</span><h2>{success.name}</h2><p>Chegada registrada às {hhmm(success.arrivedAt)}</p><div className="gpsr-success-buttons">{canWa(success)&&<button type="button" className="gpsr-btn primary" onClick={()=>whatsapp(success)}><FiMessageCircle/> Enviar WhatsApp</button>}<button type="button" className="gpsr-btn ghost" onClick={()=>{setSuccess(null);setQuery('');searchRef.current?.focus();}}>Próximo convidado <FiArrowRight/></button></div></div></div>}
-    {focus&&<div className="gpsr-focus" role="dialog" aria-modal="true" aria-label="Check-in em tela cheia"><header className="gpsr-focus-head"><span>GRUPO GPS · RECEPÇÃO</span><button className="gpsr-btn ghost" type="button" onClick={()=>setFocus(false)}>Fechar <FiX/></button></header><div className="gpsr-focus-inner"><span className="gpsr-eyebrow">CHECK-IN EXPRESSO</span><h2>Localize um convidado.</h2><div className="gpsr-search gpsr-focus-search"><FiSearch/><input ref={focusRef} autoFocus value={focusQuery} onChange={e=>setFocusQuery(e.target.value)} placeholder="Nome, empresa ou gerente..."/></div><p>{focused.length} resultados exibidos</p><div className="gpsr-focus-results">{focused.map(g=><article key={g.id}>{avatar(g)}<div className="gpsr-person-details"><strong>{g.name}</strong><small>{g.clientGroup||g.detail||'Grupo GPS'}</small></div><button type="button" className={`gpsr-check ${g.arrivedAt?'done':''}`} onClick={()=>checkin(g)} disabled={busy}>{g.arrivedAt?'Desfazer':'Confirmar'}</button></article>)}{!focused.length&&<div className="gpsr-empty">Nenhum convidado encontrado.</div>}</div></div></div>}
+    {success&&<div className="gpsr-success-mask" role="dialog" aria-modal="true" aria-label="Check-in confirmado"><div className="gpsr-success"><button type="button" className="gpsr-square" aria-label="Fechar" onClick={()=>setSuccess(null)}><FiX/></button><span className="gpsr-success-symbol"><FiCheck/></span><span className="gpsr-eyebrow">CHECK-IN CONFIRMADO</span><h2>{success.name}</h2><p>Chegada registrada às {hhmm(success.arrivedAt)}</p><div className="gpsr-success-buttons">{canWa(success)&&<button type="button" className="gpsr-btn primary" onClick={()=>whatsapp(success)}><FiMessageCircle/> Abrir WhatsApp</button>}<button type="button" className="gpsr-btn ghost" onClick={()=>{setSuccess(null);if(focus){setFocusQuery('');focusRef.current?.focus();}else{setQuery('');searchRef.current?.focus();}}}>Próximo convidado <FiArrowRight/></button></div></div></div>}
+    {focus&&<div className="gpsr-focus" role="dialog" aria-modal="true" aria-label="Check-in em tela cheia"><header className="gpsr-focus-head"><span>GRUPO GPS · RECEPÇÃO</span><div className="gpsr-focus-actions"><button className="gpsr-btn ghost gpsr-fullscreen-toggle" type="button" onClick={toggleFullscreenInFocus} aria-label={isFullscreen?'Sair da tela cheia':'Ativar tela cheia'} title={isFullscreen?'Sair da tela cheia':'Ativar tela cheia'}>{isFullscreen?<FiMinimize2/>:<FiMaximize2/>}<span className="gpsr-focus-fullscreen-label">{isFullscreen?'Sair do F11':'Tela cheia'}</span></button><button className="gpsr-btn ghost gpsr-focus-close" type="button" onClick={closeFocus}>Fechar <FiX/></button></div></header><div className="gpsr-focus-inner">{fullscreenTip&&<p className="gpsr-fullscreen-tip" role="status"><FiInfo/>{fullscreenTip}</p>}<span className="gpsr-eyebrow">CHECK-IN EXPRESSO</span><h2>Localize um convidado.</h2><div className="gpsr-search gpsr-focus-search"><FiSearch/><input ref={focusRef} autoFocus value={focusQuery} onChange={e=>setFocusQuery(e.target.value)} placeholder="Nome, empresa ou gerente..."/></div><p>{focused.length} resultados exibidos</p><div className="gpsr-focus-results">{focused.map(g=><article key={g.id}>{avatar(g)}<div className="gpsr-person-details"><strong>{g.name}</strong><small>{g.clientGroup||g.detail||'Grupo GPS'}</small></div><button type="button" className={`gpsr-check ${g.arrivedAt?'done':''}`} onClick={()=>checkin(g)} disabled={busy}>{g.arrivedAt?'Desfazer':'Confirmar'}</button></article>)}{!focused.length&&<div className="gpsr-empty">Nenhum convidado encontrado.</div>}</div></div></div>}
     {toast&&<div className="gpsr-toast" role="status"><FiCheckCircle/><span>{toast}</span><button aria-label="Fechar aviso" type="button" onClick={()=>setToast('')}><FiX/></button></div>}
   </div>;
 }
