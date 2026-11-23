@@ -7,9 +7,10 @@ import {
 } from 'react-icons/fi';
 import './npsmonitor.css';
 
-// Mesma base de API do projeto anterior. Em produção, ajuste VITE_API_BASE no Vite.
+// Mantém o endpoint já existente na aplicação corporativa.
+// O backend usa somente POST /api/melhorias, com { acao, ...dados }.
 const API_BASE = (import.meta.env.VITE_API_BASE || 'https://api-info.xyz/api').replace(/\/+$/, '');
-const API_URL = `${API_BASE}/checkin`;
+const API_URL = `${API_BASE}/melhorias`;
 const POLL_MS = 12000;
 const dateTime = iso => iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle:'short',timeStyle:'short' }) : '—';
 const timeOnly = iso => iso ? new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '—';
@@ -21,22 +22,49 @@ const emptyGuest = () => ({ name:'', group:'interno', detail:'', clientGroup:'',
 const emptyManager = () => ({ name:'', phone:'', verified:false });
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken') || '';
 
+function traducaoRequisicao(url, opts = {}) {
+  const metodo = (opts.method || 'GET').toUpperCase();
+  const caminho = decodeURI(url.slice(API_URL.length)).replace(/\/+$/, '');
+  const dados = opts.body ? JSON.parse(opts.body) : {};
+  if (metodo === 'GET' && caminho === '') return { acao:'listar' };
+  if (metodo === 'PATCH' && caminho === '/evento') return { acao:'editarEvento', ...dados };
+  if (metodo === 'POST' && caminho === '/convidados') return { acao:'adicionarConvidado', ...dados };
+  if (metodo === 'POST' && caminho === '/convidados/lote') return { acao:'adicionarConvidadosLote', ...dados };
+  if (metodo === 'POST' && caminho === '/gerentes') return { acao:'adicionarGerente', ...dados };
+  const partes = caminho.split('/').filter(Boolean);
+  if (partes.length === 2 && partes[0] === 'convidados') {
+    const acao = metodo === 'PATCH' ? 'editarConvidado' : metodo === 'DELETE' ? 'excluirConvidado' : null;
+    if (acao) return { acao, id: decodeURIComponent(partes[1]), ...dados };
+  }
+  if (partes.length === 3 && partes[0] === 'convidados' && partes[2] === 'presenca' && metodo === 'PATCH') {
+    return { acao:'definirPresenca', id:decodeURIComponent(partes[1]), ...dados };
+  }
+  if (partes.length === 3 && partes[0] === 'convidados' && partes[2] === 'whatsapp-aberto' && metodo === 'POST') {
+    return { acao:'registrarWhatsappAberto', id:decodeURIComponent(partes[1]) };
+  }
+  if (partes.length === 2 && partes[0] === 'gerentes') {
+    const acao = metodo === 'PATCH' ? 'editarGerente' : metodo === 'DELETE' ? 'excluirGerente' : null;
+    if (acao) return { acao, id:decodeURIComponent(partes[1]), ...dados };
+  }
+  throw new Error(`Operação não reconhecida: ${metodo} ${caminho}`);
+}
+
 async function request(url, opts = {}) {
   const token = getToken();
-  const response = await fetch(url, {
-    ...opts,
+  const resposta = await fetch(API_URL, {
+    method: 'POST',
     headers: {
-      ...(opts.body ? { 'Content-Type':'application/json' } : {}),
+      'Content-Type':'application/json',
       ...(token ? { Authorization:`Bearer ${token}` } : {}),
-      ...opts.headers,
     },
-    cache: 'no-store',
+    body: JSON.stringify(traducaoRequisicao(url, opts)),
+    cache:'no-store',
   });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.sucesso) {
-    throw new Error(payload?.mensagem || (response.status === 401 ? 'Faça login para acessar a lista.' : `Falha na API (HTTP ${response.status}).`));
+  const dados = await resposta.json().catch(() => null);
+  if (!resposta.ok || !dados?.sucesso) {
+    throw new Error(dados?.mensagem || (resposta.status === 401 ? 'Faça login para acessar a lista.' : `Falha na API (HTTP ${resposta.status}).`));
   }
-  return payload.data;
+  return dados.data;
 }
 
 function Background() {
