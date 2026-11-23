@@ -1,810 +1,346 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import "./npsmonitor.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FiActivity, FiArrowLeft, FiArrowRight, FiCheck, FiCheckCircle,
+  FiClock, FiDownload, FiEdit2, FiFilter, FiInfo, FiLoader,
+  FiMessageCircle, FiPlus, FiSearch, FiSettings, FiShield,
+  FiTrash2, FiUserCheck, FiUsers, FiX, FiRefreshCcw,
+} from 'react-icons/fi';
+import './npsmonitor.css';
 
-/* =========================================================
-   CONFIGURAÇÃO — EDITE AQUI
-   ========================================================= */
-const EVENT_NAME = "Semana da Qualidade";
-const EVENT_START = "2026-11-09T10:00"; // início do evento (contagem regressiva). Use null para mostrar "A definir"
-// Endpoint que recebe as melhorias (POST JSON). Use "" para apenas simular o envio.
-const API_BASE = (
-  import.meta.env.VITE_API_BASE ||
-  "https://api-info.xyz/api"
-).replace(/\/+$/, "");
+// Mesma base de API do projeto anterior. Em produção, ajuste VITE_API_BASE no Vite.
+const API_BASE = (import.meta.env.VITE_API_BASE || 'https://api-info.xyz/api').replace(/\/+$/, '');
+const API_URL = `${API_BASE}/checkin`;
+const POLL_MS = 12000;
+const dateTime = iso => iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle:'short',timeStyle:'short' }) : '—';
+const timeOnly = iso => iso ? new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '—';
+const digits = value => String(value || '').replace(/\D/g, '');
+const asNumber = value => { let n = digits(value); return [10, 11].includes(n.length) ? '55' + n : n; };
+const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const initial = name => String(name || '?').trim().split(/\s+/).filter(Boolean).map(x=>x[0]).filter(Boolean).filter((_,i,a)=>i===0||i===a.length-1).join('').slice(0,2).toUpperCase();
+const emptyGuest = () => ({ name:'', group:'interno', detail:'', clientGroup:'', managerId:'' });
+const emptyManager = () => ({ name:'', phone:'', verified:false });
+const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken') || '';
 
-const SUBMIT_URL = `${API_BASE}/melhorias`;
-
-const ROOM = "Teams";
-const QUALIDADE = "Yasmin / Amanda";
-const PROJETOS = "Enzo / Ana";
-
-// date: "AAAA-MM-DD" · time: "HH:MM" (ou null se o horário ainda não foi definido) · dur: duração em minutos
-// speaker: nome do palestrante (ou null para não mostrar palestrante)
-// Com "time" preenchido, o botão "Salvar na agenda" aparece automaticamente.
-const TALKS = [
-  {
-    date: "2026-11-09",
-    time: "15:00",
-    dur: 60,
-    tag: "Abertura",
-    speaker: "Thamires",
-    room: ROOM,
-    title: "Abertura da Semana da Qualidade",
-    desc: "Abertura oficial da Semana da Qualidade, com a apresentação da programação e do propósito do evento.",
-  },
-  {
-    date: "2026-11-10",
-    time: "15:00",
-    dur: 60,
-    tag: "Qualidade",
-    speaker: QUALIDADE,
-    room: ROOM,
-    title: "Por que o Cliente deve ser o foco quando o assunto é qualidade?",
-    desc: "Uma conversa sobre por que o cliente precisa estar no centro das decisões de qualidade e como isso aparece no dia a dia da GPS.",
-  },
-  {
-    date: "2026-11-11",
-    time: "15:00",
-    dur: 60,
-    tag: "Projetos",
-    speaker: PROJETOS,
-    room: ROOM,
-    title: "Apresentação GPSVISTA",
-    desc: "Apresentação do GPSVISTA e de como ele pode apoiar o trabalho das áreas no dia a dia.",
-  },
-  {
-    date: "2026-11-12",
-    time: "15:00",
-    dur: 60,
-    tag: "Qualidade",
-    speaker: QUALIDADE,
-    room: ROOM,
-    title: "Todo desempenho tem um termômetro você está olhando para ele?",
-    desc: "Um olhar sobre o que o contrato já informa a respeito da influência do score e por que acompanhar esse indicador faz diferença na qualidade.",
-  },
-  {
-    date: "2026-11-13",
-    time: "15:00",
-    dur: 60,
-    tag: "Projetos",
-    speaker: PROJETOS,
-    room: ROOM,
-    title: "Melhoria em processos com a tecnologia",
-    desc: "Como a tecnologia pode apoiar a melhoria dos processos, deixando as rotinas mais ágeis e com menos retrabalho.",
-  },
-];
-
-const AREAS = [
-  "Comercial",
-  "Financeiro",
-  "Operações",
-  "RH",
-  "TI",
-  "Logística",
-  "Outras",
-];
-
-const PHRASES = [
-  "Em 400 metros, vire à direita na melhoria contínua.",
-  "Você chegou ao seu destino: processos melhores.",
-  "Rota calculada: menos retrabalho, mais resultado.",
-  "Atenção: radar de ideias à frente!",
-];
-
-const NAV = [
-  { id: "qs-home", label: "Início" },
-  { id: "qs-rota", label: "Rota" },
-  { id: "qs-melhorias", label: "Melhorias" },
-];
-
-const LV = { 1: "Baixo", 2: "Médio", 3: "Alto" };
-const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-/* =========================================================
-   UTILIDADES
-   ========================================================= */
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const pad = (n) => String(n).padStart(2, "0");
-const initials = (s) =>
-  String(s)
-    .split("/")
-    .map((x) => x.trim()[0] || "")
-    .join("") || "?";
-
-function whenText(t) {
-  if (!t.date) return "A definir";
-  const d = new Date(t.date + "T" + (t.time || "00:00"));
-  const day = `${WD[d.getDay()]} · ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
-  if (!t.time) return `${day} · horário a definir`;
-  const e = new Date(d.getTime() + (t.dur || 60) * 6e4);
-  return `${day} · ${pad(d.getHours())}:${pad(d.getMinutes())}–${pad(e.getHours())}:${pad(e.getMinutes())}`;
-}
-
-function downloadIcs(t, i) {
-  const s = new Date(t.date + "T" + t.time);
-  const e = new Date(s.getTime() + (t.dur || 60) * 6e4);
-  const f = (d) =>
-    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
-  const txt = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//GrupoGPS//Semana da Qualidade//PT",
-    "BEGIN:VEVENT",
-    `UID:gps-qualidade-${i}@grupogps`,
-    `DTSTAMP:${f(new Date())}`,
-    `DTSTART:${f(s)}`,
-    `DTEND:${f(e)}`,
-    `SUMMARY:${EVENT_NAME}: ${t.title}`,
-    `LOCATION:${t.room}`,
-    `DESCRIPTION:${t.desc}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-  const url = URL.createObjectURL(new Blob([txt], { type: "text/calendar" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `palestra-${i + 1}.ics`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function launchConfetti(cv, x, y) {
-  if (!cv) return;
-  const ctx = cv.getContext("2d");
-  cv.width = window.innerWidth;
-  cv.height = window.innerHeight;
-  const cols = ["#2dff9a", "#00d4ff", "#ffb020", "#ff4d8d", "#9b7bff"];
-  const ps = Array.from({ length: 130 }, () => ({
-    x,
-    y,
-    vx: (Math.random() - 0.5) * 16,
-    vy: Math.random() * -16 - 3,
-    s: Math.random() * 8 + 4,
-    c: cols[(Math.random() * 5) | 0],
-    r: Math.random() * 6,
-    vr: (Math.random() - 0.5) * 0.4,
-    life: 1,
-  }));
-  (function f() {
-    if (!cv.isConnected) return;
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    let alive = false;
-    ps.forEach((p) => {
-      p.vy += 0.45;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.r += p.vr;
-      p.life -= 0.008;
-      if (p.life > 0) {
-        alive = true;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.r);
-        ctx.globalAlpha = p.life;
-        ctx.fillStyle = p.c;
-        ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
-        ctx.restore();
-      }
-    });
-    if (alive) requestAnimationFrame(f);
-    else ctx.clearRect(0, 0, cv.width, cv.height);
-  })();
-}
-
-/* =========================================================
-   HERO: título animado, typewriter, contagem regressiva
-   ========================================================= */
-function Title() {
-  const words = EVENT_NAME.split(" ");
-  let i = 0;
-  return (
-    <h1>
-      {words.map((w, wi) => {
-        const last = wi === words.length - 1;
-        return (
-          <span key={wi}>
-            <span
-              className={last ? "grad" : undefined}
-              style={{ display: "inline-block", marginRight: ".25em" }}
-            >
-              {[...w].map((ch, ci) => (
-                <span
-                  key={ci}
-                  className="l"
-                  style={{
-                    animationDelay: `${i++ * 45}ms`,
-                    ...(last
-                      ? { background: "inherit", WebkitBackgroundClip: "text" }
-                      : {}),
-                  }}
-                >
-                  {ch}
-                </span>
-              ))}
-            </span>
-            {!last && <br />}
-          </span>
-        );
-      })}
-    </h1>
-  );
-}
-
-function Typewriter() {
-  const [typed, setTyped] = useState("");
-  useEffect(() => {
-    let p = 0,
-      c = 0,
-      del = false,
-      timer;
-    const tick = () => {
-      const full = PHRASES[p];
-      setTyped(full.slice(0, c));
-      if (!del && c < full.length) {
-        c++;
-        timer = setTimeout(tick, 45);
-      } else if (!del) {
-        del = true;
-        timer = setTimeout(tick, 1800);
-      } else if (c > 0) {
-        c--;
-        timer = setTimeout(tick, 20);
-      } else {
-        del = false;
-        p = (p + 1) % PHRASES.length;
-        timer = setTimeout(tick, 300);
-      }
-    };
-    tick();
-    return () => clearTimeout(timer);
-  }, []);
-  return <span className="type">{typed}</span>;
-}
-
-function Countdown() {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!EVENT_START) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  if (!EVENT_START) {
-    return (
-      <div className="count">
-        <div style={{ minWidth: "auto", padding: "16px 34px" }}>
-          <b style={{ fontSize: "1.6rem" }}>A definir</b>
-          <span>Data do evento</span>
-        </div>
-      </div>
-    );
+async function request(url, opts = {}) {
+  const token = getToken();
+  const response = await fetch(url, {
+    ...opts,
+    headers: {
+      ...(opts.body ? { 'Content-Type':'application/json' } : {}),
+      ...(token ? { Authorization:`Bearer ${token}` } : {}),
+      ...opts.headers,
+    },
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.sucesso) {
+    throw new Error(payload?.mensagem || (response.status === 401 ? 'Faça login para acessar a lista.' : `Falha na API (HTTP ${response.status}).`));
   }
-
-  const d = new Date(EVENT_START).getTime() - now;
-  if (d <= 0) {
-    return (
-      <div className="count">
-        <div style={{ minWidth: "auto", padding: "16px 30px" }}>
-          <b style={{ fontSize: "1.4rem", color: "var(--acc)" }}>
-            🚀 A semana já começou!
-          </b>
-        </div>
-      </div>
-    );
-  }
-
-  const v = [
-    ["Dias", Math.floor(d / 864e5)],
-    ["Horas", Math.floor(d / 36e5) % 24],
-    ["Min", Math.floor(d / 6e4) % 60],
-    ["Seg", Math.floor(d / 1e3) % 60],
-  ];
-  return (
-    <div className="count">
-      {v.map(([l, n]) => (
-        <div key={l}>
-          <b>{pad(n)}</b>
-          <span>{l}</span>
-        </div>
-      ))}
-    </div>
-  );
+  return payload.data;
 }
 
-/* =========================================================
-   ROTA / PALESTRAS
-   ========================================================= */
-function Talk({ t, i, showToast }) {
-  const [open, setOpen] = useState(false);
-  const cardRef = useRef(null);
-
-  const onClick = (e) => {
-    if (e.target.closest("[data-ics]")) {
-      downloadIcs(t, i);
-      showToast("📅 Arquivo de agenda baixado!");
-      return;
-    }
-    setOpen((o) => !o);
-  };
-
-  const onMove = (e) => {
-    const card = cardRef.current;
-    const r = card.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    card.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
-  };
-
-  return (
-    <div className="stop reveal">
-      <div
-        ref={cardRef}
-        className={`talk${open ? " open" : ""}`}
-        onClick={onClick}
-        onMouseMove={onMove}
-        onMouseLeave={() => (cardRef.current.style.transform = "")}
-      >
-        <div className="top">
-          <span className="when">{whenText(t)}</span>
-          <span className="chip">{t.tag}</span>
-        </div>
-        <h3>{t.title}</h3>
-        {t.speaker && (
-          <div className="who">
-            <div className="av">{initials(t.speaker)}</div>
-            <div>
-              <b style={{ color: "var(--fg)" }}>{t.speaker}</b>
-            </div>
-          </div>
-        )}
-        <div className="more">
-          <p>{t.desc}</p>
-          <p className="mono" style={{ fontSize: ".85rem" }}>
-            📍 {t.room}
-          </p>
-          {t.date && t.time && (
-            <button className="btn ghost" data-ics={i} type="button">
-              📅 Salvar na agenda
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   NOVA MELHORIA
-   ========================================================= */
-function Seg({ value, onChange }) {
-  return (
-    <div className="seg">
-      {[1, 2, 3].map((v) => (
-        <button
-          key={v}
-          type="button"
-          className={value === v ? "on" : undefined}
-          onClick={() => onChange(v)}
-        >
-          {LV[v]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function MelhoriaForm({ showToast, onConfetti }) {
-  const boxRef = useRef(null);
-  const [name, setName] = useState("");
-  const [area, setArea] = useState(AREAS[0]);
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [impact, setImpact] = useState(2);
-  const [effort, setEffort] = useState(1);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(null);
-
-  async function submit(e) {
-    e.preventDefault();
-    const t = title.trim();
-    const d = desc.trim();
-    if (!t || !d) return;
-    const data = {
-      area,
-      title: t,
-      desc: d,
-      impact: LV[impact],
-      effort: LV[effort],
-      name: name.trim() || "Anônimo",
-    };
-    setSending(true);
-    try {
-      if (SUBMIT_URL) {
-        const r = await fetch(SUBMIT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-      } else {
-        await new Promise((r) => setTimeout(r, 700)); // apenas simula o envio
-      }
-      const rect = boxRef.current.getBoundingClientRect();
-      onConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      setSent(data);
-    } catch (err) {
-      showToast("Enviado!");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  function again() {
-    setName("");
-    setArea(AREAS[0]);
-    setTitle("");
-    setDesc("");
-    setImpact(2);
-    setEffort(1);
-    setSent(null);
-  }
-
-  return (
-    <div className="formwrap reveal" ref={boxRef}>
-      {!sent ? (
-        <form className="card" autoComplete="off" onSubmit={submit}>
-          <h3>💡 Nova melhoria</h3>
-          <label>Seu nome (opcional)</label>
-          <input
-            maxLength={40}
-            placeholder="Anônimo é bem-vindo"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <label>Área</label>
-          <select value={area} onChange={(e) => setArea(e.target.value)}>
-            {AREAS.map((a) => (
-              <option key={a}>{a}</option>
-            ))}
-          </select>
-          <label>Título da melhoria</label>
-          <input
-            maxLength={80}
-            required
-            placeholder="Ex.: Automatizar relatório semanal"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <label>Descreva o problema e como Projetos ajuda</label>
-          <textarea
-            maxLength={400}
-            required
-            placeholder="O que acontece hoje? O que mudaria?"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-          />
-          <div className="row2">
-            <div>
-              <label>Impacto</label>
-              <Seg value={impact} onChange={setImpact} />
-            </div>
-            <div>
-              <label>Esforço</label>
-              <Seg value={effort} onChange={setEffort} />
-            </div>
-          </div>
-          <button className="btn send" type="submit" disabled={sending}>
-            {sending ? "Enviando…" : "Enviar melhoria 🚀"}
-          </button>
-        </form>
-      ) : (
-        <div className="card done">
-          <svg className="ok" viewBox="0 0 52 52">
-            <circle cx="26" cy="26" r="24" />
-            <path d="M14 27l8 8 16-17" />
-          </svg>
-          <h3>Melhoria enviada!</h3>
-          <p>
-            Sua sugestão foi registrada. Obrigado por ajudar a melhorar nossos
-            processos!
-          </p>
-          <div className="sum">
-            <small>
-              {sent.area} · Impacto {sent.impact} · Esforço {sent.effort}
-            </small>
-            <b>{sent.title}</b>
-          </div>
-          <button className="btn ghost" type="button" onClick={again}>
-            Enviar outra melhoria
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* =========================================================
-   PÁGINA
-   ========================================================= */
-export default function NPSMonitor() {
-  const scrollRef = useRef(null);
-  const bgRef = useRef(null);
-  const glowRef = useRef(null);
-  const confettiRef = useRef(null);
-  const routeRef = useRef(null);
-  const fillRef = useRef(null);
-  const pinRef = useRef(null);
-  const toastTimer = useRef(null);
-
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastShow, setToastShow] = useState(false);
-  const [activeNav, setActiveNav] = useState(NAV[0].id);
-
-  const showToast = useCallback((msg) => {
-    setToastMsg(msg);
-    setToastShow(true);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastShow(false), 3200);
-  }, []);
-
-  const goTo = (id) => {
-    scrollRef.current
-      ?.querySelector("#" + id)
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // esconde a sidebar do sistema enquanto a página está aberta
+function Background() {
+  const ref = useRef(null);
   useEffect(() => {
-    document.body.classList.add("hide-sidebar");
-    return () => document.body.classList.remove("hide-sidebar");
-  }, []);
-
-  // fundo: rede de pontos interativa
-  useEffect(() => {
-    const cv = bgRef.current;
-    const ctx = cv.getContext("2d");
-    let W,
-      H,
-      pts = [],
-      raf;
-    const mouse = { x: -999, y: -999 };
-
-    const size = () => {
-      W = cv.width = window.innerWidth;
-      H = cv.height = window.innerHeight;
-      pts = Array.from(
-        { length: Math.min(90, Math.floor((W * H) / 16000)) },
-        () => ({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          vx: (Math.random() - 0.5) * 0.35,
-          vy: (Math.random() - 0.5) * 0.35,
-        }),
-      );
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let width = 0, height = 0, raf = 0, particles = [];
+    const pointer = {x:-999,y:-999};
+    const resize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      particles = Array.from({ length: Math.min(68, Math.round(width * height / 24500)) }, () => ({
+        x: Math.random() * width, y: Math.random() * height,
+        vx: (Math.random() - .5) * .16, vy: (Math.random() - .5) * .16,
+        r: Math.random() * 1.2 + .5,
+      }));
     };
-    const onMove = (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      const g = glowRef.current;
-      if (g) {
-        g.style.left = e.clientX + "px";
-        g.style.top = e.clientY + "px";
+    const move = e => { pointer.x = e.clientX; pointer.y = e.clientY; };
+    const draw = () => {
+      ctx.clearRect(0,0,width,height);
+      for (const p of particles) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(41,239,168,.67)'; ctx.fill();
       }
-    };
-    window.addEventListener("resize", size);
-    window.addEventListener("mousemove", onMove);
-    size();
-
-    const loop = () => {
-      ctx.clearRect(0, 0, W, H);
-      pts.forEach((p) => {
-        const dx = mouse.x - p.x,
-          dy = mouse.y - p.y,
-          d = Math.hypot(dx, dy);
-        if (d < 160) {
-          p.x -= (dx / d) * 0.6;
-          p.y -= (dy / d) * 0.6;
+      for (let i = 0; i < particles.length; i++) for (let j = i+1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j], d = Math.hypot(a.x-b.x,a.y-b.y);
+        if (d < 118) {
+          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+          ctx.strokeStyle = `rgba(0,208,235,${.13*(1-d/118)})`;ctx.stroke();
         }
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0 || p.x > W) p.vx *= -1;
-        if (p.y < 0 || p.y > H) p.vy *= -1;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.6, 0, 7);
-        ctx.fillStyle = "rgba(45,255,154,.7)";
-        ctx.fill();
-      });
-      for (let i = 0; i < pts.length; i++)
-        for (let j = i + 1; j < pts.length; j++) {
-          const a = pts[i],
-            b = pts[j],
-            d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d < 130) {
-            ctx.strokeStyle = `rgba(0,212,255,${0.18 * (1 - d / 130)})`;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-          }
-        }
-      pts.forEach((p) => {
-        const d = Math.hypot(mouse.x - p.x, mouse.y - p.y);
-        if (d < 180) {
-          ctx.strokeStyle = `rgba(45,255,154,${0.5 * (1 - d / 180)})`;
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(mouse.x, mouse.y);
-          ctx.stroke();
-        }
-      });
-      raf = requestAnimationFrame(loop);
+      }
+      if (pointer.x >= 0) {
+        const g = ctx.createRadialGradient(pointer.x,pointer.y,5,pointer.x,pointer.y,155);
+        g.addColorStop(0,'rgba(23,242,178,.045)');g.addColorStop(1,'rgba(23,242,178,0)');
+        ctx.fillStyle=g;ctx.fillRect(pointer.x-155,pointer.y-155,310,310);
+      }
+      raf = requestAnimationFrame(draw);
     };
-    loop();
-
+    window.addEventListener('resize',resize);
+    window.addEventListener('pointermove',move,{passive:true});
+    resize();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) draw();
+    else { draw(); cancelAnimationFrame(raf); }
     return () => {
+      window.removeEventListener('resize',resize);
+      window.removeEventListener('pointermove',move);
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", size);
-      window.removeEventListener("mousemove", onMove);
     };
   }, []);
+  return <canvas ref={ref} className="gpsc-stars" aria-hidden="true" />;
+}
 
-  // scroll: pin viajante, nav ativa e animação de entrada (reveal)
+function Modal({ title, eyebrow, children, onClose, wide }) {
   useEffect(() => {
-    const sc = scrollRef.current;
-    const route = routeRef.current;
-    const fill = fillRef.current;
-    const pin = pinRef.current;
-
-    const upd = () => {
-      const r = route.getBoundingClientRect();
-      const p = clamp((window.innerHeight * 0.55 - r.top) / r.height, 0, 1);
-      const h = p * r.height;
-      fill.style.height = h + "px";
-      pin.style.top = h + "px";
-      route.querySelectorAll(".stop").forEach((s) => {
-        const sr = s.getBoundingClientRect();
-        s.classList.toggle("passed", sr.top + 34 < window.innerHeight * 0.55);
-      });
-
-      let cur = NAV[0].id;
-      NAV.forEach(({ id }) => {
-        const el = sc.querySelector("#" + id);
-        if (el && el.getBoundingClientRect().top < window.innerHeight * 0.4)
-          cur = id;
-      });
-      setActiveNav(cur);
-    };
-
-    sc.addEventListener("scroll", upd, { passive: true });
-    window.addEventListener("resize", upd);
-    upd();
-
-    const io = new IntersectionObserver(
-      (es) =>
-        es.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("show");
-            io.unobserve(e.target);
-          }
-        }),
-      { threshold: 0.12 },
-    );
-    sc.querySelectorAll(".reveal").forEach((el) => io.observe(el));
-
-    return () => {
-      sc.removeEventListener("scroll", upd);
-      window.removeEventListener("resize", upd);
-      io.disconnect();
-    };
-  }, []);
-
-  useEffect(() => () => clearTimeout(toastTimer.current), []);
-
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown',onKey);
+    return () => window.removeEventListener('keydown',onKey);
+  },[onClose]);
   return (
-    <div className="nps-scope" ref={scrollRef}>
-      <canvas className="qs-bg" ref={bgRef} />
-      <div className="qs-glow" ref={glowRef} />
-      <canvas className="qs-confetti" ref={confettiRef} />
-      <div className={`toast${toastShow ? " show" : ""}`}>{toastMsg}</div>
+    <div className="gpsc-shade" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={`gpsc-modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="gpsc-modal-head"><div><small>{eyebrow}</small><h2>{title}</h2></div><button className="gpsc-iconbtn" onClick={onClose} type="button" aria-label="Fechar"><FiX/></button></div>
+        <div className="gpsc-modal-content">{children}</div>
+      </div>
+    </div>
+  );
+}
 
-      <nav>
-        {NAV.map(({ id, label }) => (
-          <a
-            key={id}
-            href={"#" + id}
-            className={activeNav === id ? "on" : undefined}
-            onClick={(e) => {
-              e.preventDefault();
-              goTo(id);
-            }}
-          >
-            {label}
-          </a>
-        ))}
+function GuestForm({ source, managers, onSave, onClose, busy }) {
+  const [value,setValue] = useState(() => ({...emptyGuest(),...source,managerId:source?.managerId || ''}));
+  const [bulk,setBulk] = useState(false);
+  const [many,setMany] = useState('');
+  function patch(field,val) { setValue(prev => ({...prev,[field]:val,...(field === 'detail' && prev.group === 'cliente' ? {clientGroup:val} : {})})); }
+  return (
+    <form onSubmit={e => {
+      e.preventDefault();
+      if (bulk) onSave({bulk:true,names:many.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),group:value.group,detail:value.detail,managerId:value.managerId});
+      else onSave(value);
+    }}>
+      {!source && <div className="gpsc-mode"><button type="button" className={!bulk?'on':''} onClick={()=>setBulk(false)}>Um convidado</button><button type="button" className={bulk?'on':''} onClick={()=>setBulk(true)}>Lista em lote</button></div>}
+      {!bulk ? <label>Nome completo<input autoFocus required minLength={2} maxLength={180} placeholder="Nome do participante" value={value.name} onChange={e=>patch('name',e.target.value)} /></label> : <label>Um nome por linha<textarea required rows={7} placeholder={'Maria Souza\nAna Ribeiro\nPedro Alves'} value={many} onChange={e=>setMany(e.target.value)} /></label>}
+      <div className="gpsc-two"><label>Categoria<select value={value.group} onChange={e=>patch('group',e.target.value)}><option value="interno">Interno</option><option value="cliente">Cliente</option></select></label><label>{value.group === 'cliente' ? 'Empresa / Cliente' : 'Cargo / Área'}<input maxLength={180} value={value.detail} onChange={e=>patch('detail',e.target.value)} placeholder={value.group==='cliente'?'Nome da empresa':'Área ou cargo'} /></label></div>
+      {value.group === 'cliente' && <label>Gerente responsável<select value={value.managerId} onChange={e=>patch('managerId',e.target.value)}><option value="">Sem gerente vinculado</option>{managers.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}
+      <div className="gpsc-dialog-actions"><button className="gpsc-btn outline" type="button" onClick={onClose}>Cancelar</button><button className="gpsc-btn primary" disabled={busy} type="submit"><FiCheck/> {busy?'Salvando...':source?'Salvar alterações':bulk?'Adicionar nomes':'Adicionar convidado'}</button></div>
+    </form>
+  );
+}
+
+function ManagerForm({ source, onSave, onClose, busy }) {
+  const [value,setValue] = useState(()=>({...emptyManager(),...source}));
+  const originalPhone = source?.phone || '';
+  const phoneChanged = Boolean(source && asNumber(value.phone) !== asNumber(originalPhone));
+  return <form onSubmit={e => { e.preventDefault(); onSave(value); }}>
+    <label>Nome do gerente<input required maxLength={90} autoFocus value={value.name} onChange={e=>setValue({...value,name:e.target.value})} /></label>
+    <label>WhatsApp (país + DDD + número)<input placeholder="5511999999999" inputMode="tel" value={value.phone} onChange={e=>setValue({...value,phone:e.target.value,verified:false})} /></label>
+    <label className="gpsc-checklabel"><input type="checkbox" checked={Boolean(value.verified)} onChange={e=>setValue({...value,verified:e.target.checked})}/> Conferi pessoalmente o número acima</label>
+    {phoneChanged && <p className="gpsc-hint">O telefone foi alterado. Confira o novo número antes de marcar a validação.</p>}
+    <div className="gpsc-dialog-actions"><button type="button" className="gpsc-btn outline" onClick={onClose}>Cancelar</button><button type="submit" className="gpsc-btn primary" disabled={busy}><FiCheck/> {busy?'Salvando...':'Salvar gerente'}</button></div>
+  </form>;
+}
+
+export default function CheckinEvento() {
+  const [data,setData] = useState({guests:[],managers:[],eventTitle:'Evento Grupo GPS'});
+  const [loaded,setLoaded] = useState(false);
+  const [error,setError] = useState('');
+  const [busy,setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [view,setView] = useState('recepcao');
+  const [query,setQuery] = useState('');
+  const [status,setStatus] = useState('todos');
+  const [group,setGroup] = useState('todos');
+  const [sort,setSort] = useState('pendentes');
+  const [dialog,setDialog] = useState(null);
+  const [success,setSuccess] = useState(null);
+  const [toast,setToast] = useState('');
+  const toastTimer = useRef(null);
+  const searchRef = useRef(null);
+  const notify = useCallback(message => {
+    setToast(message);
+    clearTimeout(toastTimer.current);
+    toastTimer.current=setTimeout(()=>setToast(''),4400);
+  },[]);
+
+  const reload = useCallback(async (silent=false) => {
+    if (busyRef.current) return;
+    try {
+      const result=await request(API_URL);
+      setData(result);
+      setError('');setLoaded(true);
+    } catch (err) {
+      setError(err.message || 'Não foi possível conectar ao servidor.');
+      if (!silent) setLoaded(true);
+    }
+  },[]);
+  useEffect(()=>{
+    document.body.classList.add('hide-sidebar');
+    reload();
+    const id=setInterval(()=>reload(true),POLL_MS);
+    return ()=>{document.body.classList.remove('hide-sidebar');clearInterval(id);clearTimeout(toastTimer.current);};
+  },[reload]);
+  useEffect(()=>{
+    const fn=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setView('recepcao');setTimeout(()=>searchRef.current?.focus(),40);}};
+    window.addEventListener('keydown',fn);return()=>window.removeEventListener('keydown',fn);
+  },[]);
+
+  const guests=data.guests||[];
+  const managers=data.managers||[];
+  const managersById=useMemo(()=>Object.fromEntries(managers.map(m=>[m.id,m])),[managers]);
+  const present=guests.filter(g=>Boolean(g.arrivedAt)).length;
+  const pending=guests.length-present;
+  const percent=guests.length?Math.round(present/guests.length*100):0;
+  const recent=useMemo(()=>guests.filter(g=>g.arrivedAt).sort((a,b)=>Date.parse(b.arrivedAt)-Date.parse(a.arrivedAt)).slice(0,6),[guests]);
+  const found=useMemo(()=>guests.filter(g => normalize([g.name,g.detail,g.clientGroup,managersById[g.managerId]?.name].join(' ')).includes(normalize(query)))
+    .filter(g => status==='todos'||(status==='presentes'?Boolean(g.arrivedAt):!g.arrivedAt))
+    .filter(g => group==='todos'||g.group===group)
+    .sort((a,b)=>sort==='az'?a.name.localeCompare(b.name,'pt-BR'):sort==='recent'?(Date.parse(b.arrivedAt)||0)-(Date.parse(a.arrivedAt)||0):Number(Boolean(a.arrivedAt))-Number(Boolean(b.arrivedAt))||a.name.localeCompare(b.name,'pt-BR')),
+    [guests,managersById,query,status,group,sort]);
+
+  const mutate = useCallback(async (endpoint,method,body) => {
+    if (busyRef.current) return null;
+    busyRef.current=true;setBusy(true);
+    try {
+      const payload=await request(API_URL+endpoint, {method, ...(body!==undefined?{body:JSON.stringify(body)}:{})});
+      const fresh=await request(API_URL);
+      setData(fresh);setError('');
+      return payload;
+    } catch (err) { notify(err.message || 'Não foi possível salvar.'); return null; }
+    finally {busyRef.current=false;setBusy(false);}
+  },[notify]);
+
+  async function checkIn(g) {
+    if (g.arrivedAt) {
+      setDialog({type:'confirm',title:'Desfazer presença?',message:`A presença de ${g.name} foi registrada às ${dateTime(g.arrivedAt)}. Isso não desfaz uma mensagem já enviada pelo WhatsApp.`,action:'Desfazer check-in',onConfirm:async()=>{
+        const r=await mutate(`/convidados/${encodeURIComponent(g.id)}/presenca`,'PATCH',{presente:false});
+        if(r){setDialog(null);notify('Presença desfeita com sucesso.');}
+      }});return;
+    }
+    const r=await mutate(`/convidados/${encodeURIComponent(g.id)}/presenca`,'PATCH',{presente:true});
+    if(r){setSuccess({...g,arrivedAt:r.arrivedAt});notify('Chegada registrada com sucesso.');}
+  }
+  async function saveGuest(input) {
+    const source=dialog?.source;
+    const path=input.bulk?'/convidados/lote':source?`/convidados/${encodeURIComponent(source.id)}`:'/convidados';
+    const r=await mutate(path,source?'PATCH':'POST',input);
+    if(r){setDialog(null);notify(input.bulk?`${r.added} nome(s) incluído(s) na lista.`:'Convidado salvo com sucesso.');}
+  }
+  function deleteGuest(g) {
+    setDialog({type:'confirm',title:'Remover convidado?',message:`${g.name} será excluído da lista de presença${g.arrivedAt?' e seu check-in será removido':''}. Esta ação não pode ser desfeita pela interface.`,action:'Excluir convidado',danger:true,onConfirm:async()=>{
+      const r=await mutate(`/convidados/${encodeURIComponent(g.id)}`,'DELETE');
+      if(r){setDialog(null);notify('Convidado removido.');}
+    }});
+  }
+  async function saveManager(input) {
+    const source=dialog?.source;
+    const r=await mutate(source?`/gerentes/${encodeURIComponent(source.id)}`:'/gerentes',source?'PATCH':'POST',{...input,phone:asNumber(input.phone)});
+    if(r){setDialog(null);notify('Gerente salvo com sucesso.');}
+  }
+  function deleteManager(m) {
+    setDialog({type:'confirm',title:'Excluir gerente?',message:`Remover ${m.name}? Não será permitido se houver clientes vinculados.`,action:'Remover gerente',danger:true,onConfirm:async()=>{
+      const r=await mutate(`/gerentes/${encodeURIComponent(m.id)}`,'DELETE');
+      if(r){setDialog(null);notify('Gerente removido.');}
+    }});
+  }
+  async function sendWhatsApp(g) {
+    const manager=managersById[g.managerId];
+    if(!g.arrivedAt){notify('Confirme a chegada antes de notificar o gerente.');return;}
+    if(!manager?.verified||!/^\d{12,15}$/.test(manager?.phone||'')){
+      notify('Vincule e valide o telefone do gerente antes de abrir o WhatsApp.');return;
+    }
+    const msg=`GRUPO GPS | CHECK-IN\n\nOlá, ${manager.name}!\n\nO cliente ${g.name}, da empresa ${g.clientGroup||g.detail||'não informada'}, chegou ao evento ${data.eventTitle||'Grupo GPS'} às ${timeOnly(g.arrivedAt)}.\n\nRecepção Grupo GPS.`;
+    const isMobile=/iPhone|Android|iPad/i.test(navigator.userAgent);
+    const target=isMobile?`https://wa.me/${digits(manager.phone)}?text=${encodeURIComponent(msg)}`:`https://web.whatsapp.com/send?phone=${digits(manager.phone)}&text=${encodeURIComponent(msg)}`;
+    // Abertura acontece diretamente no clique (não aguarda fetch, evitando bloqueador de popups).
+    window.open(target,'_blank','noopener,noreferrer');
+    const result=await mutate(`/convidados/${encodeURIComponent(g.id)}/whatsapp-aberto`,'POST',{});
+    if(result) notify('Conversa preparada. Clique em Enviar no WhatsApp.');
+    setSuccess(null);
+  }
+  function exportCSV() {
+    const columns=[['Nome','Categoria','Empresa/Cargo','Gerente','WhatsApp Gerente','Presença','Horário']];
+    for(const g of guests){const m=managersById[g.managerId];columns.push([g.name,g.group==='cliente'?'Cliente':'Interno',g.clientGroup||g.detail||'',m?.name||'',m?.phone||'',g.arrivedAt?'Presente':'Pendente',g.arrivedAt?dateTime(g.arrivedAt):'']);}
+    const csv='\ufeff'+columns.map(row=>row.map(cell=>{const value=String(cell??''); const safe=/^[=+@-]/.test(value)?"'"+value:value;return '"'+safe.replace(/"/g,'""')+'"';}).join(';')).join('\r\n');
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='presencas-grupo-gps.csv';a.click();URL.revokeObjectURL(url);
+  }
+
+  function guestCard(g,compact=false) {
+    const manager=managersById[g.managerId];
+    const canWhatsApp=g.group==='cliente'&&g.arrivedAt&&manager?.verified&&/^\d{12,15}$/.test(manager.phone||'');
+    return <article className={`gpsc-person ${g.arrivedAt?'is-present':''} ${compact?'compact':''}`} key={g.id}>
+      <div className="gpsc-avatar">{initial(g.name)}{g.arrivedAt&&<i><FiCheck/></i>}</div>
+      <div className="gpsc-person-body">
+        <strong>{g.name}</strong>
+        <span>{g.clientGroup||g.detail||'Grupo GPS'} <b className="gpsc-mid">·</b> {g.group==='cliente'?'Cliente':'Interno'}</span>
+        {g.group==='cliente'&&manager&&<small>Gerente: {manager.name} {!manager.verified?'· telefone pendente':''}</small>}
+      </div>
+      <div className="gpsc-person-actions">
+        {g.arrivedAt&&<span className="gpsc-time"><FiClock/> {timeOnly(g.arrivedAt)}</span>}
+        <button type="button" className={`gpsc-btn ${g.arrivedAt?'muted':'primary'} gpsc-checkin-btn`} disabled={busy} onClick={()=>checkIn(g)}>{g.arrivedAt?<><FiRefreshCcw/> Desfazer</>:<><FiCheck/> Confirmar</>}</button>
+        {canWhatsApp&&<button type="button" className="gpsc-quickwa" onClick={()=>sendWhatsApp(g)} title="Abrir WhatsApp com a mensagem preparada"><FiMessageCircle/> WhatsApp</button>}
+        {!compact&&<div className="gpsc-more-actions"><button type="button" aria-label={`Editar ${g.name}`} title="Editar convidado" onClick={()=>setDialog({type:'guest',source:g})}><FiEdit2/></button><button type="button" aria-label={`Excluir ${g.name}`} title="Remover convidado" onClick={()=>deleteGuest(g)}><FiTrash2/></button></div>}
+      </div>
+    </article>;
+  }
+
+  return <div className="gps-checkin">
+    <Background/>
+    <div className="gpsc-wrap">
+      <nav className="gpsc-nav" aria-label="Navegação da lista de presença">
+        <button className={view==='recepcao'?'on':''} onClick={()=>setView('recepcao')}>Recepção</button>
+        <button className={view==='lista'?'on':''} onClick={()=>setView('lista')}>Lista completa</button>
+        <button className={view==='gerentes'?'on':''} onClick={()=>setView('gerentes')}>Gerentes</button>
       </nav>
 
-      <header className="hero" id="qs-home">
-        <div>
-          <div className="radar">
-            <i></i>
-            <i></i>
-            <i></i>
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"
-                fill="#2dff9a"
-              />
-              <circle cx="12" cy="10" r="2.8" fill="#06080f" />
-            </svg>
-          </div>
-          <span className="tag">GrupoGPS · Evento interno</span>
-          <Title />
-          <p className="sub">
-            Recalculando a rota rumo à excelência. <Typewriter />
-          </p>
-          <Countdown />
-          <a
-            href="#qs-rota"
-            className="btn"
-            onClick={(e) => {
-              e.preventDefault();
-              goTo("qs-rota");
-            }}
-          >
-            Iniciar navegação ➜
-          </a>
-          <div className="scroll">↓ ROLE PARA VIAJAR</div>
-        </div>
+      <header className="gpsc-heading">
+        <div className="gpsc-identity"><div className="gpsc-led"/><span>GRUPO GPS · EVENTO</span></div>
+        <div className="gpsc-heading-row"><div><h1>Lista de <em>presença.</em></h1><p>{data.eventTitle||'Evento Grupo GPS'} · Controle de entrada em tempo real</p></div><div className="gpsc-heading-buttons"><button type="button" className="gpsc-btn outline" onClick={()=>reload()}><FiRefreshCcw/> Atualizar</button><button type="button" className="gpsc-btn primary" onClick={()=>setDialog({type:'guest',source:null})}><FiPlus/> Adicionar nome</button></div></div>
       </header>
 
-      <main>
-        <section id="qs-rota">
-          <div className="head reveal">
-            <div className="eyebrow">// 01 · ROTA DA QUALIDADE</div>
-            <h2>
-              5 paradas. <span style={{ color: "var(--acc2)" }}>1 destino.</span>
-            </h2>
-            <p className="lead">
-              Acompanhe a programação da Semana da Qualidade, palestra por
-              palestra.
-            </p>
-          </div>
-          <div className="route" ref={routeRef}>
-            <div className="track"></div>
-            <div className="fill" ref={fillRef}></div>
-            <svg className="pin" ref={pinRef} viewBox="0 0 24 24">
-              <path
-                d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"
-                fill="#2dff9a"
-              />
-              <circle cx="12" cy="10" r="2.8" fill="#06080f" />
-            </svg>
-            <div>
-              {TALKS.map((t, i) => (
-                <Talk key={i} t={t} i={i} showToast={showToast} />
-              ))}
-            </div>
-          </div>
-        </section>
+      {error&&<div className="gpsc-alert"><FiInfo/><span><b>Não foi possível sincronizar:</b> {error} As alterações não serão salvas até restabelecer a conexão.</span><button onClick={()=>reload()}>Tentar novamente</button></div>}
+      {!loaded&&<div className="gpsc-loading"><FiLoader/> Carregando lista do servidor...</div>}
 
-        <section id="qs-melhorias">
-          <div className="head reveal">
-            <div className="eyebrow">// 02 · MELHORIAS</div>
-            <h2>
-              Onde <span style={{ color: "var(--acc2)" }}>Projetos</span> pode
-              ajudar?
-            </h2>
-            <p className="lead">
-              Conte uma melhoria de processo da sua área em que o time de
-              Projetos consegue apoiar.
-            </p>
-          </div>
-          <MelhoriaForm
-            showToast={showToast}
-            onConfetti={(x, y) => launchConfetti(confettiRef.current, x, y)}
-          />
+      <div className="gpsc-metrics">
+        <div className="gpsc-metric"><span><FiUsers/> Convidados</span><strong>{guests.length}</strong><small>na lista</small></div>
+        <div className="gpsc-metric"><span><FiUserCheck/> Presentes</span><strong>{present}</strong><small>check-ins registrados</small></div>
+        <div className="gpsc-metric"><span><FiClock/> Pendentes</span><strong>{pending}</strong><small>aguardando chegada</small></div>
+        <div className="gpsc-metric progress"><span><FiActivity/> Presença</span><strong>{percent}%</strong><div className="gpsc-track"><div style={{width:`${percent}%`}}/></div></div>
+      </div>
+
+      {view==='recepcao'&&<div className="gpsc-main-grid">
+        <section className="gpsc-panel gpsc-frontdesk">
+          <div className="gpsc-panel-title"><div><small>CHECK-IN EXPRESSO</small><h2>Localizar participante</h2></div><span className="gpsc-mini-chip"><FiSearch/> Ctrl + K</span></div>
+          <div className="gpsc-search"><FiSearch/><input autoFocus ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Pesquise por nome, empresa ou gerente..." aria-label="Buscar convidado" /></div>
+          <div className="gpsc-frontdesk-results">{found.slice(0,7).map(g=>guestCard(g,true))}{!found.length&&<p className="gpsc-empty">Nenhum participante encontrado. Você pode adicioná-lo à lista.</p>}</div>
+          <div className="gpsc-frontdesk-foot"><span>{found.length} resultado(s) encontrados</span><button onClick={()=>setView('lista')} type="button">Abrir lista completa <FiArrowRight/></button></div>
         </section>
-      </main>
+        <aside className="gpsc-panel gpsc-activity"><div className="gpsc-panel-title"><div><small>ATUALIZAÇÃO EM TEMPO REAL</small><h2>Últimas chegadas</h2></div><span className="gpsc-live"><i/> Ativo</span></div>
+          {recent.length?recent.map(g=><div className="gpsc-activity-item" key={g.id}><div className="gpsc-activity-symbol"><FiCheck/></div><div><strong>{g.name}</strong><span>{g.group==='cliente'?'Cliente':'Interno'} · {timeOnly(g.arrivedAt)}</span></div></div>):<div className="gpsc-empty">As chegadas confirmadas aparecerão aqui.</div>}
+          <div className="gpsc-side-note"><FiShield/><p>As presenças são gravadas no servidor. Nenhuma mensagem é enviada automaticamente pelo WhatsApp.</p></div>
+        </aside>
+      </div>}
+
+      {view==='lista'&&<section className="gpsc-panel gpsc-all">
+        <div className="gpsc-panel-title"><div><small>CONTROLE DE PARTICIPANTES</small><h2>Todos os convidados <span className="gpsc-mini-chip">{found.length}</span></h2></div><button className="gpsc-btn outline" onClick={exportCSV}><FiDownload/> Exportar CSV</button></div>
+        <div className="gpsc-list-tools"><div className="gpsc-search"><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar participante..."/></div><select value={group} onChange={e=>setGroup(e.target.value)} aria-label="Filtrar categoria"><option value="todos">Todos os tipos</option><option value="cliente">Clientes</option><option value="interno">Internos</option></select><select value={sort} onChange={e=>setSort(e.target.value)} aria-label="Ordenação"><option value="pendentes">Pendentes primeiro</option><option value="az">Nome A–Z</option><option value="recent">Últimas chegadas</option></select></div>
+        <div className="gpsc-tabs">{[['todos','Todos'],['pendentes','Aguardando'],['presentes','Presentes']].map(([key,label])=><button type="button" onClick={()=>setStatus(key)} className={status===key?'on':''} key={key}>{label}</button>)}</div>
+        <div className="gpsc-guests-list">{found.map(g=>guestCard(g))}{!found.length&&<p className="gpsc-empty">Nenhum participante para esse filtro.</p>}</div>
+      </section>}
+
+      {view==='gerentes'&&<section className="gpsc-panel gpsc-all"><div className="gpsc-panel-title"><div><small>VÍNCULOS DOS CLIENTES</small><h2>Gerentes responsáveis</h2></div><button className="gpsc-btn primary" type="button" onClick={()=>setDialog({type:'manager',source:null})}><FiPlus/> Novo gerente</button></div>
+        <div className="gpsc-managers">{managers.map(m=><article className="gpsc-manager-card" key={m.id}><div className="gpsc-avatar"><FiUsers/></div><div><strong>{m.name}</strong><span>{m.phone||'Sem telefone cadastrado'}</span><small>{m.verified?'Número conferido':'Telefone ainda não validado'} · {guests.filter(g=>g.managerId===m.id).length} cliente(s)</small></div><div className="gpsc-manager-buttons"><button type="button" aria-label="Editar gerente" onClick={()=>setDialog({type:'manager',source:m})}><FiEdit2/></button><button type="button" aria-label="Excluir gerente" onClick={()=>deleteManager(m)}><FiTrash2/></button></div></article>)}</div>
+      </section>}
+
+      <footer className="gpsc-footer"><span>Grupo GPS · Lista de presença</span><span>Sincronização a cada 12 segundos · JSON no servidor</span></footer>
     </div>
-  );
+
+    {dialog?.type==='guest'&&<Modal title={dialog.source?'Editar participante':'Adicionar participantes'} eyebrow="GESTÃO DE CONVIDADOS" onClose={()=>setDialog(null)}><GuestForm key={dialog.source?.id||'new'} source={dialog.source} managers={managers} busy={busy} onSave={saveGuest} onClose={()=>setDialog(null)}/></Modal>}
+    {dialog?.type==='manager'&&<Modal title={dialog.source?'Editar gerente':'Cadastrar gerente'} eyebrow="RESPONSÁVEL PELO CLIENTE" onClose={()=>setDialog(null)}><ManagerForm key={dialog.source?.id||'new'} source={dialog.source} onSave={saveManager} busy={busy} onClose={()=>setDialog(null)}/></Modal>}
+    {dialog?.type==='confirm'&&<Modal title={dialog.title} eyebrow="CONFIRMAÇÃO NECESSÁRIA" onClose={()=>setDialog(null)}><p className="gpsc-confirm-text">{dialog.message}</p><div className="gpsc-dialog-actions"><button className="gpsc-btn outline" onClick={()=>setDialog(null)}>Cancelar</button><button disabled={busy} className={`gpsc-btn ${dialog.danger?'danger':'primary'}`} onClick={dialog.onConfirm}>{busy?'Salvando...':dialog.action}</button></div></Modal>}
+    {success&&<Modal title="Chegada confirmada!" eyebrow="CHECK-IN REALIZADO" onClose={()=>setSuccess(null)}><div className="gpsc-success"><div className="gpsc-success-icon"><FiCheck/></div><strong>{success.name}</strong><p>Entrada registrada às {timeOnly(success.arrivedAt)}</p>{success.group==='cliente'&&managersById[success.managerId]?.verified&&<button type="button" className="gpsc-btn primary" onClick={()=>sendWhatsApp(success)}><FiMessageCircle/> Enviar pelo WhatsApp</button>}<button type="button" className="gpsc-btn outline" onClick={()=>{setSuccess(null);searchRef.current?.focus();}}>Próximo convidado <FiArrowRight/></button></div></Modal>}
+    {toast&&<div className="gpsc-toast" role="status"><FiCheckCircle/>{toast}<button type="button" aria-label="Fechar notificação" onClick={()=>setToast('')}><FiX/></button></div>}
+  </div>;
 }
