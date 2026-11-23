@@ -1,366 +1,282 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FiActivity, FiArrowRight, FiCheck, FiCheckCircle, FiClock,
-  FiDownload, FiEdit2, FiFilter, FiInfo, FiMessageCircle,
+  FiArrowRight, FiCheck, FiCheckCircle, FiClock, FiDownload, FiEdit2,
+  FiFileText, FiFilter, FiInfo, FiMaximize2, FiMessageCircle,
   FiPlus, FiRefreshCw, FiSearch, FiSettings, FiTrash2,
-  FiUserCheck, FiUsers, FiX, FiMaximize2, FiCalendar,
-} from "react-icons/fi";
-import "./npsmonitor.css";
+  FiUploadCloud, FiUserCheck, FiUsers, FiX,
+} from 'react-icons/fi';
+import './npsmonitor.css';
 
-/* =============================================================
-   GRUPO GPS · CHECK-IN EXPERIENCE
-   Integração com o backend EXISTENTE:
-     POST /api/melhorias  { acao: "listar" | ..., ...dados }
-   Endpoint público (sem token JWT); NÃO usa localStorage para salvar.
-   A persistência fica no data/presencas-evento.json do backend.
-   ============================================================= */
-const API_BASE = (import.meta.env.VITE_API_BASE || "https://api-info.xyz/api").replace(/\/+$/, "");
+// Mantém a rota pública que já existe no backend.
+const API_BASE = (import.meta.env.VITE_API_BASE || 'https://api-info.xyz/api').replace(/\/+$/, '');
 const API_URL = `${API_BASE}/melhorias`;
 const POLL_MS = 12000;
-
-const normal = (v = "") => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim();
-const digits = (v = "") => String(v ?? "").replace(/\D/g, "");
-const phoneBR = (v) => { const n = digits(v); return [10, 11].includes(n.length) ? `55${n}` : n; };
-const clock = (d) => d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—";
-const fullDate = (d) => d ? new Date(d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
-const initials = (s = "") => { const w = s.trim().split(/\s+/).filter(Boolean); return ((w[0]?.[0] || "?") + (w.length > 1 ? w.at(-1)?.[0] || "" : "")).toUpperCase(); };
-const avatarTone = (name) => [...String(name)].reduce((n, c) => n + c.charCodeAt(0), 0) % 6;
-const emptyGuest = () => ({ name: "", group: "interno", detail: "", clientGroup: "", managerId: "" });
-const emptyManager = () => ({ name: "", phone: "", verified: false });
+const freshState = () => ({ guests: [], managers: [], eventTitle: 'Evento Grupo GPS' });
+const newGuest = () => ({ name: '', group: 'interno', detail: '', clientGroup: '', managerId: '' });
+const newManager = () => ({ name: '', phone: '', verified: false });
+const normalize = (v) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const num = (v) => String(v ?? '').replace(/\D/g, '');
+const toPhone = (v) => { const n = num(v); return [10, 11].includes(n.length) ? `55${n}` : n; };
+const hhmm = (v) => v ? new Date(v).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+const dateTime = (v) => v ? new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+const initials = (v) => { const words = String(v || '?').trim().split(/\s+/); return (words[0][0] + (words.length > 1 ? words.at(-1)[0] : '')).toUpperCase(); };
+const matches = (g, term, managers) => normalize([g.name, g.detail, g.clientGroup, managers[g.managerId]?.name].join(' ')).includes(normalize(term));
 
 async function api(acao, payload = {}) {
   const response = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ acao, ...payload }),
-    cache: "no-store",
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store', body: JSON.stringify({ acao, ...payload }),
   });
-  const json = await response.json().catch(() => null);
-  if (!response.ok || json?.sucesso !== true) {
-    throw new Error(json?.mensagem || `Erro HTTP ${response.status} ao acessar a lista de presença.`);
-  }
-  return json.data;
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.sucesso) throw new Error(body?.mensagem || `Erro HTTP ${response.status}`);
+  return body.data;
 }
 
-function Starfield() {
-  const canvasRef = useRef(null);
+function Sky() {
+  const ref = useRef(null);
   useEffect(() => {
-    const cv = canvasRef.current;
-    if (!cv) return;
-    const ctx = cv.getContext("2d");
+    const canvas = ref.current, ctx = canvas?.getContext('2d');
     if (!ctx) return;
-    let stars = [], w = 0, h = 0, raf = 0;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let stars = [], raf = 0, w = 0, h = 0;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const resize = () => {
-      w = window.innerWidth; h = window.innerHeight;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      cv.width = Math.floor(w * ratio); cv.height = Math.floor(h * ratio);
+      w = window.innerWidth; h = window.innerHeight;
+      canvas.width = w * ratio; canvas.height = h * ratio;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      // Posições estáveis, para não piscar durante os renders do React.
-      let seed = 6142026;
-      const rnd = () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
-      stars = Array.from({ length: Math.min(77, Math.max(33, Math.round(w * h / 18500))) }, () => ({
-        x: rnd() * w, y: rnd() * h, r: .45 + rnd() * .9, phase: rnd() * 6.28,
-      }));
+      let seed = 7827; const random = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
+      stars = Array.from({ length: Math.min(70, Math.max(28, Math.round(w*h/24000))) }, () => ({ x: random()*w, y: random()*h, p: random()*6.28 }));
     };
     const draw = (t) => {
-      ctx.clearRect(0, 0, w, h);
-      const dots = stars.map(s => ({ x: s.x + Math.sin(t * .00008 + s.phase) * 5, y: s.y + Math.cos(t * .00007 + s.phase) * 4, r: s.r }));
-      for (let i = 0; i < dots.length; i++) {
-        const a = dots[i]; let links = 0;
-        for (let j = i + 1; j < dots.length && links < 3; j++) {
-          const b = dots[j], d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d < 122) {
-            ctx.strokeStyle = `rgba(0,207,191,${(1 - d / 122) * .16})`;
-            ctx.lineWidth = .65; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); links++;
-          }
-        }
-        ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-        ctx.fillStyle = i % 4 === 0 ? "rgba(0,218,212,.75)" : "rgba(20,202,152,.65)"; ctx.fill();
-      }
-      if (!reduced) raf = requestAnimationFrame(draw);
+      ctx.clearRect(0,0,w,h);
+      const dots = stars.map(s => ({x:s.x+Math.sin(t/13000+s.p)*3, y:s.y+Math.cos(t/16000+s.p)*3}));
+      dots.forEach((a,i) => {
+        ctx.fillStyle = 'rgba(16,244,170,.76)'; ctx.beginPath(); ctx.arc(a.x,a.y,1,0,Math.PI*2); ctx.fill();
+        dots.slice(i+1).forEach(b => { const d=Math.hypot(a.x-b.x,a.y-b.y); if(d<100){ctx.strokeStyle=`rgba(7,187,195,${.13*(1-d/100)})`;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();} });
+      });
+      if (!reduced) raf=requestAnimationFrame(draw);
     };
-    resize(); draw(0);
-    window.addEventListener("resize", resize);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+    resize(); draw(0); window.addEventListener('resize', resize);
+    return () => {cancelAnimationFrame(raf);window.removeEventListener('resize',resize);};
   }, []);
-  return <canvas className="gpsx-stars" ref={canvasRef} aria-hidden="true" />;
+  return <canvas className="gpsr-stars" ref={ref} aria-hidden="true" />;
 }
 
-function Modal({ eyebrow, title, children, close, size = "normal" }) {
+function Overlay({ title, eyebrow, children, close, large = false }) {
   useEffect(() => {
-    const onKey = e => { if (e.key === "Escape") close(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const key = (e) => { if(e.key === 'Escape') close(); };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
   }, [close]);
-  return <div className="gpsx-overlay" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-    <section className={`gpsx-dialog ${size === "wide" ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-      <header className="gpsx-dialog-header"><div><small>{eyebrow}</small><h2>{title}</h2></div>
-        <button className="gpsx-icon-button" onClick={close} type="button" aria-label="Fechar"><FiX /></button></header>
-      <div className="gpsx-dialog-body">{children}</div>
+  return <div className="gpsr-mask" onMouseDown={e => { if(e.target===e.currentTarget) close(); }}>
+    <section className={`gpsr-modal ${large ? 'gpsr-modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      <header className="gpsr-modal-head"><div><span className="gpsr-eyebrow">{eyebrow}</span><h2>{title}</h2></div><button type="button" aria-label="Fechar" className="gpsr-square" onClick={close}><FiX /></button></header>
+      <div className="gpsr-modal-body">{children}</div>
     </section>
   </div>;
 }
 
-function GuestForm({ source, managers, busy, onSubmit, onCancel }) {
-  const [form, setForm] = useState(() => ({ ...emptyGuest(), ...source, managerId: source?.managerId || "" }));
-  const [bulk, setBulk] = useState(false);
-  const [names, setNames] = useState("");
-  const patch = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+function GuestEditor({ source, managers, busy, save, close }) {
+  const [g, setG] = useState(() => ({...newGuest(), ...source, managerId: source?.managerId || ''}));
+  const [mode,setMode] = useState('unico'); const [names,setNames] = useState('');
+  const patch=(k,v)=>setG(prev=>({...prev,[k]:v}));
   const submit = e => {
     e.preventDefault();
-    if (bulk) onSubmit({ bulk: true, names: names.split(/\r?\n/).map(s => s.trim()).filter(Boolean), group: form.group, detail: form.detail, clientGroup: form.group === "cliente" ? form.detail : "", managerId: form.managerId });
-    else onSubmit({ ...form, clientGroup: form.group === "cliente" ? form.detail : "" });
+    if (mode === 'lote') save({ bulk:true, names:names.split(/\r?\n/).map(x=>x.trim()).filter(Boolean), group:g.group, detail:g.detail, clientGroup:g.group==='cliente'?g.detail:'', managerId:g.group==='cliente'?g.managerId:'' });
+    else save({...g,clientGroup:g.group==='cliente'?g.detail:'',managerId:g.group==='cliente'?g.managerId:''});
   };
-  return <form className="gpsx-form" onSubmit={submit}>
-    {!source && <div className="gpsx-form-switch"><button type="button" className={!bulk ? "active" : ""} onClick={() => setBulk(false)}>Um participante</button><button type="button" className={bulk ? "active" : ""} onClick={() => setBulk(true)}>Cadastro em lote</button></div>}
-    {bulk ? <label>Nomes (um por linha)<textarea rows={7} required value={names} onChange={e => setNames(e.target.value)} placeholder={"Ana Silva\nCarlos Ferreira\nMaria Oliveira"} /></label>
-      : <label>Nome completo<input autoFocus required minLength={2} maxLength={180} value={form.name} onChange={e => patch("name", e.target.value)} placeholder="Nome do convidado" /></label>}
-    <div className="gpsx-form-columns">
-      <label>Categoria<select value={form.group} onChange={e => patch("group", e.target.value)}><option value="interno">Interno</option><option value="cliente">Cliente</option></select></label>
-      <label>{form.group === "cliente" ? "Empresa / cliente" : "Cargo / área"}<input maxLength={160} value={form.detail} onChange={e => patch("detail", e.target.value)} placeholder={form.group === "cliente" ? "Nome da empresa" : "Área ou cargo"} /></label>
-    </div>
-    {form.group === "cliente" && <label>Gerente responsável<select value={form.managerId || ""} onChange={e => patch("managerId", e.target.value)}><option value="">Sem gerente vinculado</option>{managers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}
-    <div className="gpsx-dialog-actions"><button className="gpsx-button outline" type="button" onClick={onCancel}>Cancelar</button><button className="gpsx-button primary" type="submit" disabled={busy}><FiCheck />{busy ? "Salvando..." : source ? "Salvar alterações" : bulk ? "Adicionar lista" : "Adicionar convidado"}</button></div>
+  return <form className="gpsr-form" onSubmit={submit}>
+    {!source && <div className="gpsr-choice"><button type="button" className={mode==='unico'?'on':''} onClick={()=>setMode('unico')}>Uma pessoa</button><button type="button" className={mode==='lote'?'on':''} onClick={()=>setMode('lote')}>Vários nomes</button></div>}
+    {mode==='unico' ? <label>Nome completo<input required autoFocus maxLength={180} minLength={2} value={g.name} onChange={e=>patch('name',e.target.value)} placeholder="Nome e sobrenome"/></label>
+      : <label>Um nome por linha<textarea required rows={6} value={names} onChange={e=>setNames(e.target.value)} placeholder={'Maria Silva\nJoão Oliveira\nAna Souza'}/></label>}
+    <div className="gpsr-form-cols"><label>Tipo de convidado<select value={g.group} onChange={e=>patch('group',e.target.value)}><option value="interno">Interno</option><option value="cliente">Cliente</option></select></label><label>{g.group==='cliente'?'Empresa / cliente':'Cargo / área'}<input value={g.detail} maxLength={160} onChange={e=>patch('detail',e.target.value)} placeholder="Opcional"/></label></div>
+    {g.group==='cliente' && <label>Gerente responsável<select value={g.managerId} onChange={e=>patch('managerId',e.target.value)}><option value="">Não vinculado</option>{managers.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}
+    <div className="gpsr-modal-actions"><button className="gpsr-btn ghost" type="button" onClick={close}>Cancelar</button><button className="gpsr-btn primary" disabled={busy} type="submit"><FiCheck/>{busy?'Salvando...':'Salvar'}</button></div>
   </form>;
 }
 
-function ManagerForm({ source, busy, onSubmit, onCancel }) {
-  const [form, setForm] = useState(() => ({ ...emptyManager(), ...source }));
-  return <form className="gpsx-form" onSubmit={e => { e.preventDefault(); onSubmit({ ...form, phone: phoneBR(form.phone) }); }}>
-    <label>Nome do gerente<input autoFocus required maxLength={90} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
-    <label>WhatsApp com DDD<input inputMode="tel" value={form.phone} placeholder="5511999999999" onChange={e => setForm({ ...form, phone: e.target.value, verified: false })} /></label>
-    <label className="gpsx-check-label"><input type="checkbox" checked={!!form.verified} onChange={e => setForm({ ...form, verified: e.target.checked })} /> Conferi pessoalmente este número</label>
-    <p className="gpsx-field-hint">O sistema apenas prepara a mensagem. O envio precisa ser confirmado manualmente no WhatsApp.</p>
-    <div className="gpsx-dialog-actions"><button className="gpsx-button outline" type="button" onClick={onCancel}>Cancelar</button><button disabled={busy} className="gpsx-button primary" type="submit"><FiCheck />{busy ? "Salvando..." : "Salvar gerente"}</button></div>
+function ManagerEditor({ source, busy, close, save }) {
+  const [g,setG]=useState(()=>({...newManager(),...source}));
+  return <form className="gpsr-form" onSubmit={e=>{e.preventDefault();save({...g,phone:toPhone(g.phone)});}}>
+    <label>Nome do gerente<input required autoFocus maxLength={90} value={g.name} onChange={e=>setG({...g,name:e.target.value})}/></label>
+    <label>Telefone WhatsApp<input inputMode="tel" placeholder="5511999999999" value={g.phone} onChange={e=>setG({...g,phone:e.target.value,verified:false})}/></label>
+    <label className="gpsr-check-label"><input type="checkbox" checked={!!g.verified} onChange={e=>setG({...g,verified:e.target.checked})}/> Conferi o telefone deste gerente</label>
+    <div className="gpsr-modal-actions"><button className="gpsr-btn ghost" type="button" onClick={close}>Cancelar</button><button className="gpsr-btn primary" type="submit" disabled={busy}><FiCheck/> Salvar gerente</button></div>
   </form>;
+}
+
+// Importador orientado às 3 abas da lista Escala 6x1 e a planilhas genéricas.
+const standard = v => normalize(v).replace(/[^a-z0-9]+/g,'');
+const pick = (obj, aliases) => {
+  const cols = Object.entries(obj);
+  for (const key of aliases) {
+    const value = cols.find(([k])=>standard(k)===standard(key))?.[1];
+    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();
+  }
+  return '';
+};
+function cleanEmployee(name) {
+  // Ex.: "01I2 - 022252 - RAFAEL BAPTISTA" => "RAFAEL BAPTISTA".
+  const v=String(name||'').trim();
+  return /^[A-Z0-9]{2,8}\s*-\s*\d{4,}\s*-\s*/i.test(v) ? v.replace(/^[A-Z0-9]{2,8}\s*-\s*\d{4,}\s*-\s*/i,'').trim() : v;
+}
+function rowsToGuests(book) {
+  const all = []; const seen = new Set(); let ignored = 0;
+  const aliases = ['nome','nome completo','colaborador','convidado','convidados','confirmados','participante','participantes'];
+  for (const sheet of book) {
+    const origin = standard(sheet.name);
+    for (const row of sheet.rows) {
+      const name = cleanEmployee(pick(row,origin==='internos'?['COLABORADOR',...aliases]:origin==='clientes'||origin==='estacionamento'?['Confirmados','CONVIDADOS',...aliases]:aliases));
+      if (name.length < 2 || /^(total|subtotal|confirmados|convidados|nome|declinaram|declinou|não comparecerá|nao comparecera)$/i.test(name)) {ignored++;continue;}
+      const groupValue=pick(row,['Categoria','Tipo','Grupo','Perfil']);
+      const group = origin==='internos'?'interno':(origin==='clientes'||origin==='estacionamento')?'cliente':(/cliente|externo/i.test(groupValue)?'cliente':'interno');
+      const company = group==='cliente'?pick(row,['GRUPO CLIENTE','Empresa','Cliente','Organização','Organizacao','Detalhe']):'';
+      const detail=group==='interno'?pick(row,['FUNCAO ATUAL','Função','Funcao','Cargo','Área','Area','Detalhe']):company;
+      const managerName=group==='cliente'?pick(row,['GC','Gerente Responsável','Gerente','Responsável','Responsavel']):'';
+      const managerPhone=group==='cliente'?pick(row,['Tel','Telefone GC','Telefone gerente','Whatsapp','Telefone']):'';
+      const key=`${group}|${normalize(name)}`;
+      if (seen.has(key)) {ignored++;continue;}
+      seen.add(key);
+      all.push({name,group,detail,clientGroup:company,managerName,managerPhone});
+    }
+  }
+  return { guests: all, ignored };
+}
+
+function ImportSheet({ busy, onImport, close }) {
+  const [preview,setPreview]=useState(null); const [fileName,setFileName]=useState('');
+  const [error,setError]=useState(''); const [reading,setReading]=useState(false);
+  const [selection,setSelection]=useState('todas');
+  const read=async(file)=>{
+    if(!file) return;
+    setError('');setPreview(null);setReading(true);setFileName(file.name);
+    try {
+      if(file.size>7*1024*1024)throw new Error('O arquivo deve ter no máximo 7 MB.');
+      const module=await import('xlsx');
+      const XLSX=module.default || module;
+      const buffer=await file.arrayBuffer();
+      const workbook=XLSX.read(buffer,{type:'array',cellDates:false});
+      const sheets=workbook.SheetNames.map(name=>({name,rows:XLSX.utils.sheet_to_json(workbook.Sheets[name],{defval:'',raw:false,blankrows:false})}));
+      if(!sheets.length)throw new Error('Nenhuma aba encontrada.');
+      setPreview(sheets);setSelection('todas');
+    }catch(e){setError(`Não foi possível ler a planilha: ${e.message}`);}finally{setReading(false);}
+  };
+  const selected=preview?.filter(s=>selection==='todas'||s.name===selection)||[];
+  const parsed=useMemo(()=>rowsToGuests(selected),[preview,selection]);
+  return <div className="gpsr-import">
+    <div className="gpsr-import-drop"><FiUploadCloud/><strong>Selecione a planilha de convidados</strong><p>Excel .xlsx, .xls ou CSV. A importação não apaga os registros existentes.</p><label className="gpsr-btn primary" htmlFor="gpsr-file">Escolher arquivo</label><input id="gpsr-file" type="file" accept=".xlsx,.xls,.csv" onChange={e=>{read(e.target.files?.[0]);e.target.value='';}}/></div>
+    {reading && <p className="gpsr-hint">Lendo planilha...</p>}
+    {error && <p className="gpsr-import-error">{error}</p>}
+    {preview && <>
+      <div className="gpsr-import-controls"><label>Aba da planilha<select value={selection} onChange={e=>setSelection(e.target.value)}><option value="todas">Todas as abas (sem repetir nomes)</option>{preview.map(s=><option value={s.name} key={s.name}>{s.name} ({s.rows.length} linhas)</option>)}</select></label><div><strong>{parsed.guests.length}</strong><span>pessoas identificadas</span></div><div><strong>{parsed.ignored}</strong><span>linhas descartadas/repetidas</span></div></div>
+      <div className="gpsr-import-preview"><div className="gpsr-preview-head"><strong>Prévia antes de salvar</strong><span>{fileName}</span></div>{parsed.guests.slice(0,10).map((g,i)=><div className="gpsr-preview-line" key={i}><span>{g.name}</span><small>{g.group==='cliente'?'Cliente':'Interno'}{g.clientGroup?` · ${g.clientGroup}`:''}{g.managerName?` · ${g.managerName}`:''}</small></div>)}{parsed.guests.length>10&&<p className="gpsr-hint">+ {parsed.guests.length-10} convidados na importação</p>}{!parsed.guests.length&&<p className="gpsr-hint">Nenhum nome reconhecido. Confira os cabeçalhos da aba.</p>}</div>
+      <p className="gpsr-hint">Duplicados já existentes serão ignorados. Novos gerentes serão criados com telefone não validado. Nenhuma presença anterior será apagada.</p>
+      <div className="gpsr-modal-actions"><button className="gpsr-btn ghost" type="button" onClick={close}>Cancelar</button><button type="button" disabled={busy||!parsed.guests.length||parsed.guests.length>500} className="gpsr-btn primary" onClick={()=>onImport(parsed.guests)}><FiUploadCloud/>{busy?'Importando...':`Importar ${parsed.guests.length} nomes`}</button></div>
+      {parsed.guests.length>500&&<p className="gpsr-import-error">Limite de 500 pessoas por importação. Selecione uma aba de cada vez.</p>}
+    </>}
+  </div>;
 }
 
 export default function NPSMonitor() {
-  const [data, setData] = useState({ eventTitle: "Evento Grupo GPS", guests: [], managers: [] });
-  const [loaded, setLoaded] = useState(false);
-  const [navActive, setNavActive] = useState("inicio");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
-  const [quickQuery, setQuickQuery] = useState("");
-  const [quickGroup, setQuickGroup] = useState("todos");
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("todos");
-  const [group, setGroup] = useState("todos");
-  const [sort, setSort] = useState("pending");
-  const [dialog, setDialog] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [spot, setSpot] = useState(false);
-  const [spotQuery, setSpotQuery] = useState("");
-  const [toast, setToast] = useState("");
-  const [eventName, setEventName] = useState("");
-  const searchRef = useRef(null);
-  const spotRef = useRef(null);
-  const timerRef = useRef(null);
-  const notify = useCallback(s => { setToast(s); clearTimeout(timerRef.current); timerRef.current = setTimeout(() => setToast(""), 4500); }, []);
-
-  const reload = useCallback(async (silent = false) => {
-    if (busyRef.current) return;
-    try { const current = await api("listar"); setData(current); setError(""); }
-    catch (e) { setError(e.message || "Não foi possível carregar os registros do servidor."); }
-    finally { if (!silent) setLoaded(true); }
-  }, []);
-
-  useEffect(() => {
-    document.body.classList.add("hide-sidebar");
-    reload();
-    const poll = setInterval(() => reload(true), POLL_MS);
-    return () => { document.body.classList.remove("hide-sidebar"); clearInterval(poll); clearTimeout(timerRef.current); };
-  }, [reload]);
-
-  useEffect(() => {
-    const onKey = e => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault(); if (!dialog && !success) { setSpot(false); searchRef.current?.focus(); searchRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }
-      }
-      if (e.key === "Escape" && spot) setSpot(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [dialog, success, spot]);
-
-  const guests = data.guests || [];
-  const managers = data.managers || [];
-  const byManager = useMemo(() => Object.fromEntries(managers.map(m => [m.id, m])), [managers]);
-  const arrived = guests.filter(g => !!g.arrivedAt).length;
-  const pending = guests.length - arrived;
-  const pct = guests.length ? Math.round(arrived * 100 / guests.length) : 0;
-  const matches = useCallback((g, term) => normal([g.name, g.detail, g.clientGroup, byManager[g.managerId]?.name].join(" ")).includes(normal(term)), [byManager]);
-  const quick = useMemo(() => guests.filter(g => (quickGroup === "todos" || g.group === quickGroup) && matches(g, quickQuery)).sort((a, b) => Number(!!a.arrivedAt) - Number(!!b.arrivedAt) || a.name.localeCompare(b.name, "pt-BR")), [guests, quickGroup, quickQuery, matches]);
-  const visible = useMemo(() => guests.filter(g => matches(g, query)).filter(g => group === "todos" || g.group === group).filter(g => status === "todos" || (status === "presentes" ? !!g.arrivedAt : !g.arrivedAt)).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name, "pt-BR") : sort === "recent" ? (Date.parse(b.arrivedAt) || 0) - (Date.parse(a.arrivedAt) || 0) : Number(!!a.arrivedAt) - Number(!!b.arrivedAt) || a.name.localeCompare(b.name, "pt-BR")), [guests, query, group, status, sort, matches]);
-  const recent = useMemo(() => guests.filter(g => g.arrivedAt).sort((a, b) => Date.parse(b.arrivedAt) - Date.parse(a.arrivedAt)).slice(0, 5), [guests]);
-  const spotResults = useMemo(() => guests.filter(g => matches(g, spotQuery)).sort((a, b) => Number(!!a.arrivedAt) - Number(!!b.arrivedAt) || a.name.localeCompare(b.name, "pt-BR")).slice(0, 8), [guests, spotQuery, matches]);
-
-  // O backend é a fonte única: não mostramos sucesso antes de confirmar o POST.
-  const act = useCallback(async (acao, payload) => {
-    if (busyRef.current) return null;
-    busyRef.current = true; setBusy(true);
-    try {
-      const result = await api(acao, payload);
-      try { const fresh = await api("listar"); setData(fresh); setError(""); }
-      catch (e) { setError(`Alteração salva, mas a atualização da tela falhou: ${e.message}`); }
-      return result;
-    } catch (e) { notify(e.message || "Falha ao salvar no servidor."); return null; }
-    finally { busyRef.current = false; setBusy(false); }
-  }, [notify]);
-
-  const closeDialog = useCallback(() => setDialog(null), []);
-  const scrollTop = () => { setNavActive("inicio"); document.getElementById("gpsx-checkin")?.scrollIntoView({ behavior: "smooth", block: "start" }); };
-  const scrollList = () => { setNavActive("lista"); document.getElementById("gpsx-lista")?.scrollIntoView({ behavior: "smooth", block: "start" }); };
-
-  async function checkIn(g) {
-    if (g.arrivedAt) {
-      setDialog({ kind: "confirm", title: "Desfazer presença?", text: `A entrada de ${g.name} foi registrada às ${fullDate(g.arrivedAt)}. Isso não cancela mensagens já enviadas no WhatsApp.`, confirmLabel: "Desfazer check-in", danger: true, onConfirm: async () => {
-        const result = await act("definirPresenca", { id: g.id, presente: false });
-        if (result) { setDialog(null); notify("Presença desfeita e horário removido."); }
-      } });
-      return;
-    }
-    const result = await act("definirPresenca", { id: g.id, presente: true });
-    if (result) { setSuccess({ ...g, ...result }); notify("Chegada registrada com sucesso."); }
+  const [data,setData]=useState(freshState);
+  const [loaded,setLoaded]=useState(false), [error,setError]=useState(''), [busy,setBusy]=useState(false);
+  const [view,setView]=useState('recepcao'), [query,setQuery]=useState(''), [focusQuery,setFocusQuery]=useState('');
+  const [group,setGroup]=useState('todos'), [status,setStatus]=useState('todos'), [sort,setSort]=useState('pendentes');
+  const [dialog,setDialog]=useState(null), [focus,setFocus]=useState(false), [success,setSuccess]=useState(null), [toast,setToast]=useState('');
+  const [eventName,setEventName]=useState('');
+  const busyRef=useRef(false), toastTimeout=useRef(null), searchRef=useRef(null),focusRef=useRef(null),revision=useRef(0);
+  const notify=useCallback(message=>{setToast(message);clearTimeout(toastTimeout.current);toastTimeout.current=setTimeout(()=>setToast(''),4200);},[]);
+  const reload=useCallback(async (quiet=false)=>{
+    if(busyRef.current)return;
+    const id=++revision.current;
+    try{const state=await api('listar');if(id===revision.current){setData(state);setError('');}}
+    catch(e){if(id===revision.current)setError(e.message||'Não foi possível conectar ao servidor.');}
+    finally{if(!quiet)setLoaded(true);}
+  },[]);
+  useEffect(()=>{
+    document.body.classList.add('hide-sidebar'); reload();
+    const ticker=setInterval(()=>reload(true),POLL_MS);
+    return()=>{document.body.classList.remove('hide-sidebar');clearInterval(ticker);clearTimeout(toastTimeout.current);};
+  },[reload]);
+  useEffect(()=>{
+    const key=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();focus?focusRef.current?.focus():searchRef.current?.focus();}if(e.key==='Escape'&&focus)setFocus(false);};
+    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
+  },[focus]);
+  const guests=data.guests||[],managers=data.managers||[];
+  const byManager=useMemo(()=>Object.fromEntries(managers.map(m=>[m.id,m])),[managers]);
+  const present=guests.filter(g=>g.arrivedAt).length, pending=guests.length-present,percent=guests.length?Math.round(present/guests.length*100):0;
+  const recent=useMemo(()=>guests.filter(g=>g.arrivedAt).slice().sort((a,b)=>Date.parse(b.arrivedAt)-Date.parse(a.arrivedAt)).slice(0,5),[guests]);
+  const filtered=useMemo(()=>guests.filter(g=>matches(g,query,byManager)).filter(g=>group==='todos'||group===g.group).filter(g=>status==='todos'||(status==='presentes'?!!g.arrivedAt:!g.arrivedAt)).slice().sort((a,b)=>sort==='az'?a.name.localeCompare(b.name,'pt-BR'):sort==='recent'?(Date.parse(b.arrivedAt)||0)-(Date.parse(a.arrivedAt)||0):Number(!!a.arrivedAt)-Number(!!b.arrivedAt)||a.name.localeCompare(b.name,'pt-BR')),[guests,query,group,status,sort,byManager]);
+  const focused=useMemo(()=>guests.filter(g=>matches(g,focusQuery,byManager)).slice().sort((a,b)=>Number(!!a.arrivedAt)-Number(!!b.arrivedAt)||a.name.localeCompare(b.name,'pt-BR')).slice(0,8),[guests,focusQuery,byManager]);
+  const quick=filtered.slice(0,6);
+  const mutate=useCallback(async (acao,payload)=>{
+    if(busyRef.current)return null;
+    busyRef.current=true;setBusy(true);++revision.current;
+    try{
+      const res=await api(acao,payload);
+      try { const updated=await api('listar');setData(updated);setError(''); }
+      catch(e) {setError(`Operação salva, mas a atualização falhou: ${e.message}`);} 
+      return res;
+    }catch(e){notify(e.message||'Falha ao salvar no servidor.');return null;}
+    finally{busyRef.current=false;setBusy(false);}
+  },[notify]);
+  const close=()=>setDialog(null);
+  async function checkin(g){
+    if(g.arrivedAt){setDialog({type:'confirm',title:'Desfazer presença?',message:`Remover o registro de chegada de ${g.name}, feito às ${dateTime(g.arrivedAt)}?`,button:'Desfazer presença',danger:true,confirm:async()=>{if(await mutate('definirPresenca',{id:g.id,presente:false})){close();notify('Presença removida.');}}});return;}
+    const result=await mutate('definirPresenca',{id:g.id,presente:true});if(result){setSuccess({...g,...result});notify('Check-in confirmado.');}
   }
-
-  async function saveGuest(input) {
-    const editing = dialog?.source;
-    const acao = input.bulk ? "adicionarConvidadosLote" : editing ? "editarConvidado" : "adicionarConvidado";
-    const result = await act(acao, editing ? { ...input, id: editing.id } : input);
-    if (result) { setDialog(null); notify(input.bulk ? `${result.added} convidado(s) adicionado(s).` : editing ? "Convidado atualizado." : "Convidado adicionado."); }
+  async function saveGuest(g){const source=dialog?.source;const result=await mutate(g.bulk?'adicionarConvidadosLote':source?'editarConvidado':'adicionarConvidado',source?{...g,id:source.id}:g);if(result){close();notify(g.bulk?`${result.added} convidados incluídos.`:'Convidado salvo com sucesso.');}}
+  function removeGuest(g){setDialog({type:'confirm',title:'Excluir convidado?',message:`Remover ${g.name} da lista${g.arrivedAt?' e excluir sua presença':''}?`,button:'Excluir convidado',danger:true,confirm:async()=>{if(await mutate('excluirConvidado',{id:g.id})){close();notify('Convidado removido.');}}});}
+  async function saveManager(m){const source=dialog?.source;const result=await mutate(source?'editarGerente':'adicionarGerente',source?{...m,id:source.id}:m);if(result){setDialog({type:'managers'});notify('Gerente salvo.');}}
+  function removeManager(m){setDialog({type:'confirm',title:'Excluir gerente?',message:`Remover ${m.name}? Não será permitido se existirem convidados vinculados.`,button:'Excluir gerente',danger:true,confirm:async()=>{if(await mutate('excluirGerente',{id:m.id})){setDialog({type:'managers'});notify('Gerente removido.');}}});}
+  async function importGuests(rows){const result=await mutate('importarConvidadosPlanilha',{guests:rows});if(result){close();notify(`${result.added} convidados importados · ${result.skipped} ignorados · ${result.managersAdded} gerentes novos.`);setView('lista');}}
+  function whatsapp(g){
+    const m=byManager[g.managerId];
+    if(!g.arrivedAt)return notify('Confirme a presença primeiro.');
+    if(!m?.verified||!/^\d{12,15}$/.test(toPhone(m.phone)))return notify('Valide o número do gerente antes de notificar.');
+    const msg=`GRUPO GPS | CHECK-IN\n\nOlá, ${m.name}!\n\nO cliente ${g.name}, da empresa ${g.clientGroup||g.detail||'não informada'}, chegou ao evento ${data.eventTitle||'Grupo GPS'} às ${hhmm(g.arrivedAt)}.\n\nRecepção Grupo GPS.`;
+    const phone=toPhone(m.phone), mobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
+    const url=mobile?`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`:`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+    window.open(url,'_blank','noopener,noreferrer');
+    api('registrarWhatsappAberto',{id:g.id}).catch(()=>{});setSuccess(null);notify('Conversa aberta. Clique em Enviar no WhatsApp.');
   }
-  function deleteGuest(g) {
-    setDialog({ kind: "confirm", title: "Excluir convidado?", text: `${g.name} será removido da lista${g.arrivedAt ? ", inclusive seu check-in" : ""}. A operação não pode ser desfeita pela interface.`, confirmLabel: "Excluir convidado", danger: true, onConfirm: async () => {
-      if (await act("excluirConvidado", { id: g.id })) { setDialog(null); notify("Convidado excluído."); }
-    } });
+  function exportCSV(){
+    const cols=[['Nome','Categoria','Empresa / Área','Gerente','Presença','Chegada']];
+    guests.forEach(g=>cols.push([g.name,g.group==='cliente'?'Cliente':'Interno',g.clientGroup||g.detail||'',byManager[g.managerId]?.name||'',g.arrivedAt?'Presente':'Pendente',dateTime(g.arrivedAt)]));
+    const esc=(v)=>{const s=String(v??'');return '"'+(/^[=+@\-\t\r]/.test(s)?"'"+s:s).replace(/"/g,'""')+'"';};
+    const url=URL.createObjectURL(new Blob(['\ufeff'+cols.map(x=>x.map(esc).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download='grupo-gps-presencas.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
   }
-  async function saveManager(form) {
-    const src = dialog?.source;
-    const result = await act(src ? "editarGerente" : "adicionarGerente", src ? { ...form, id: src.id } : form);
-    if (result) { setDialog({ kind: "managers" }); notify("Gerente salvo."); }
-  }
-  function deleteManager(m) {
-    setDialog({ kind: "confirm", title: "Excluir gerente?", text: `Excluir ${m.name}? Não será permitido enquanto houver clientes vinculados.`, confirmLabel: "Excluir gerente", danger: true, onCancel: () => setDialog({ kind: "managers" }), onConfirm: async () => {
-      if (await act("excluirGerente", { id: m.id })) { setDialog({ kind: "managers" }); notify("Gerente excluído."); }
-    } });
-  }
-  async function updateEvent(e) {
-    e.preventDefault();
-    const result = await act("editarEvento", { eventTitle: eventName });
-    if (result) { setDialog(null); notify("Nome do evento atualizado."); }
-  }
-  function whatsapp(g) {
-    const m = byManager[g.managerId];
-    if (!g.arrivedAt) return notify("Confirme a presença antes de notificar o gerente.");
-    if (!m?.verified || !/^\d{12,15}$/.test(phoneBR(m.phone))) return notify("Configure e valide o telefone do gerente antes de notificar.");
-    const msg = `📍 *${data.eventTitle || "Evento Grupo GPS"}*\n\nOlá, ${m.name}!\n\n✅ O(a) cliente *${g.name}* chegou ao evento.\n🏢 Empresa: ${g.clientGroup || g.detail || "Não informada"}\n🕒 Chegada: ${fullDate(g.arrivedAt)}\n\n_Recepção · Grupo GPS_`;
-    const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-    const link = mobile ? `https://wa.me/${phoneBR(m.phone)}?text=${encodeURIComponent(msg)}` : `https://web.whatsapp.com/send?phone=${phoneBR(m.phone)}&text=${encodeURIComponent(msg)}`;
-    // Aciona a nova aba no próprio clique. O usuário finaliza o envio no WhatsApp.
-    const a = document.createElement("a"); a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer"; document.body.appendChild(a); a.click(); a.remove();
-    api("registrarWhatsappAberto", { id: g.id }).catch(() => {});
-    setSuccess(null); notify("Conversa preparada: confira e clique em Enviar no WhatsApp.");
-  }
-  function downloadCsv() {
-    const lines = [["Nome", "Categoria", "Empresa/Cargo", "Gerente", "WhatsApp Gerente", "Presença", "Chegada"]];
-    guests.forEach(g => { const m = byManager[g.managerId]; lines.push([g.name, g.group === "cliente" ? "Cliente" : "Interno", g.clientGroup || g.detail || "", m?.name || "", m?.phone || "", g.arrivedAt ? "Presente" : "Pendente", fullDate(g.arrivedAt)]); });
-    const esc = s => { const v = String(s ?? ""); const safe = /^[=+@\-\t\r]/.test(v) ? `'${v}` : v; return `"${safe.replace(/"/g, '""')}"`; };
-    const csv = "\ufeff" + lines.map(row => row.map(esc).join(";")).join("\r\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "lista-presenca-grupo-gps.csv"; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  function openSettings() { setEventName(data.eventTitle || "Evento Grupo GPS"); setDialog({ kind: "settings" }); }
+  const canWa=g=>g.group==='cliente'&&!!g.arrivedAt&&!!byManager[g.managerId]?.verified&&/^\d{12,15}$/.test(toPhone(byManager[g.managerId]?.phone));
+  const avatar=(g)=><span className={`gpsr-avatar ${g.arrivedAt?'present':''}`}>{initials(g.name)}{g.arrivedAt&&<i><FiCheck/></i>}</span>;
+  const row=(g,small=false)=><article key={g.id} className={`gpsr-person ${g.arrivedAt?'arrived':''} ${small?'compact':''}`}>
+    {avatar(g)}
+    <div className="gpsr-person-details"><strong title={g.name}>{g.name}</strong><small>{g.clientGroup||g.detail||'Grupo GPS'} · {g.group==='cliente'?'Cliente':'Interno'}</small>{g.group==='cliente'&&byManager[g.managerId]&&<small>Gerente: {byManager[g.managerId].name}</small>}</div>
+    {!small&&<span className={`gpsr-type ${g.group==='cliente'?'client':''}`}>{g.group==='cliente'?'Cliente':'Interno'}</span>}
+    <div className="gpsr-person-commands"><button type="button" className={`gpsr-check ${g.arrivedAt?'done':''}`} disabled={busy} onClick={()=>checkin(g)}>{g.arrivedAt?<><FiRefreshCw/> Desfazer</>:<><FiCheck/> Confirmar</>}</button>{g.arrivedAt&&<small>Às {hhmm(g.arrivedAt)}</small>}{canWa(g)&&<button type="button" className="gpsr-wa" onClick={()=>whatsapp(g)}><FiMessageCircle/> WhatsApp</button>}{!small&&<div className="gpsr-mini-actions"><button type="button" title="Editar convidado" aria-label={`Editar ${g.name}`} onClick={()=>setDialog({type:'guest',source:g})}><FiEdit2/></button><button type="button" title="Excluir convidado" aria-label={`Excluir ${g.name}`} onClick={()=>removeGuest(g)}><FiTrash2/></button></div>}</div>
+  </article>;
 
-  const avatar = g => <div className={`gpsx-avatar tone-${avatarTone(g.name)}`}>{initials(g.name)}{g.arrivedAt && <span className="gpsx-avatar-check"><FiCheck /></span>}</div>;
-  const canWa = g => { const m = byManager[g.managerId]; return g.group === "cliente" && !!g.arrivedAt && !!m?.verified && /^\d{12,15}$/.test(phoneBR(m.phone)); };
-
-  return <div className="gpsx-app">
-    <Starfield />
-    <div className="gpsx-shell">
-      <header className="gpsx-header">
-        <nav className="gpsx-nav-pill" aria-label="Navegação do evento">
-          <button type="button" className={navActive === "inicio" ? "active" : ""} onClick={scrollTop}>Início</button>
-          <button type="button" className={navActive === "lista" ? "active" : ""} onClick={scrollList}>Lista</button>
-          <button type="button" onClick={() => { setNavActive("gerentes"); setDialog({ kind: "managers" }); }} className={navActive === "gerentes" ? "active" : ""}>Gerentes</button>
-        </nav>
-        <div className="gpsx-header-tools">
-          <button title="Adicionar nome" aria-label="Adicionar nome" type="button" onClick={() => setDialog({ kind: "guest", source: null })}><FiPlus /></button>
-          <button title="Exportar CSV" aria-label="Exportar CSV" type="button" onClick={downloadCsv}><FiDownload /></button>
-          <button title="Configurações" aria-label="Configurações" type="button" onClick={openSettings}><FiSettings /></button>
-        </div>
-      </header>
-
-      <main className="gpsx-main">
-        {error && <div className="gpsx-alert" role="alert"><FiInfo /><span><b>Sincronização:</b> {error}</span><button onClick={() => reload()} type="button">Tentar novamente</button></div>}
-        {!loaded && <div className="gpsx-loading">Carregando convidados do servidor...</div>}
-
-        <section id="gpsx-checkin" className="gpsx-quick-card" aria-label="Check-in expresso">
-          <div className="gpsx-quick-head"><span className="gpsx-quick-mark">✦</span><div><small>RECEPÇÃO DO EVENTO</small><h1>Check-in de convidados</h1></div><span className="gpsx-live"><i /> ATIVO</span></div>
-          <div className="gpsx-quick-body">
-            <label htmlFor="gpsx-quick-input">NOME DO CONVIDADO</label>
-            <div className="gpsx-quick-search"><FiSearch /><input id="gpsx-quick-input" type="search" ref={searchRef} autoComplete="off" value={quickQuery} onChange={e => setQuickQuery(e.target.value)} placeholder="Digite um nome para começar..." /><kbd>Ctrl K</kbd></div>
-            <div className="gpsx-quick-filter"><span>FILTRAR POR</span><div role="group" aria-label="Tipo de participante">{[["todos", "Todos"], ["cliente", "Clientes"], ["interno", "Internos"]].map(([v, label]) => <button key={v} type="button" className={quickGroup === v ? "selected" : ""} onClick={() => setQuickGroup(v)} aria-pressed={quickGroup === v}>{label}</button>)}</div></div>
-            <div className="gpsx-results-head"><span>{quickQuery ? "RESULTADOS DA BUSCA" : "PRÓXIMAS CHEGADAS"}</span><span>{quick.length} ENCONTRADOS</span></div>
-            <div className="gpsx-quick-results">{quick.slice(0, 5).map(g => <article className="gpsx-quick-guest" key={g.id}>
-              {avatar(g)}<div className="gpsx-person"><strong title={g.name}>{g.name}</strong><small>{g.clientGroup || g.detail || (g.group === "cliente" ? "Cliente externo" : "Grupo GPS")} · {g.group === "cliente" ? "Cliente" : "Interno"}</small></div>
-              <button className={`gpsx-quick-confirm ${g.arrivedAt ? "done" : ""}`} disabled={busy} onClick={() => checkIn(g)} type="button">{g.arrivedAt ? "✓ Desfazer" : "Confirmar ↗"}</button>
-            </article>)}{!quick.length && <div className="gpsx-empty">Nenhum convidado encontrado. Utilize “Adicionar nome” para cadastrá-lo.</div>}</div>
-          </div>
-          <div className="gpsx-quick-foot"><span><i /> {arrived} presentes · {pending} aguardando</span><div className="gpsx-quick-foot-actions"><button type="button" onClick={() => setDialog({ kind: "guest", source: null })}>+ Adicionar nome</button><button type="button" onClick={() => { setSpot(true); setSpotQuery(""); setTimeout(() => spotRef.current?.focus(), 100); }}>Modo foco ↗</button></div></div>
-        </section>
-
-        <section className="gpsx-stats" aria-label="Indicadores">
-          <button type="button" onClick={() => { setStatus("todos"); scrollList(); }}><span className="gpsx-stat-icon blue"><FiUsers /></span><span><strong>{guests.length}</strong><small>Convidados previstos</small></span></button>
-          <button type="button" onClick={() => { setStatus("presentes"); scrollList(); }}><span className="gpsx-stat-icon green"><FiUserCheck /></span><span><strong>{arrived}</strong><small>Já fizeram check-in</small></span></button>
-          <button type="button" onClick={() => { setStatus("pendentes"); scrollList(); }}><span className="gpsx-stat-icon gold"><FiClock /></span><span><strong>{pending}</strong><small>Aguardando chegada</small></span></button>
-        </section>
-
-        <div className="gpsx-workspace" id="gpsx-lista">
-          <section className="gpsx-roster">
-            <div className="gpsx-roster-head"><div><small>ACOMPANHAMENTO COMPLETO</small><h2>Todos os convidados</h2></div><span className="gpsx-count">{visible.length} pessoas</span></div>
-            <div className="gpsx-roster-controls">
-              <div className="gpsx-roster-search"><FiSearch /><input type="search" placeholder="Busque por nome, empresa ou cargo..." value={query} onChange={e => setQuery(e.target.value)} /></div>
-              <select aria-label="Ordenação" value={sort} onChange={e => setSort(e.target.value)}><option value="pending">Pendentes primeiro</option><option value="name">Nome A–Z</option><option value="recent">Últimas chegadas</option></select>
-            </div>
-            <div className="gpsx-filterbar"><div className="gpsx-segments">{[["todos", "Todos", guests.length], ["pendentes", "Aguardando", pending], ["presentes", "Presentes", arrived]].map(([v, label, count]) => <button key={v} className={status === v ? "active" : ""} onClick={() => setStatus(v)} type="button">{label} <span>{count}</span></button>)}</div><div className="gpsx-group-tabs">{[["todos", "Todos"], ["cliente", "Clientes"], ["interno", "Internos"]].map(([v, label]) => <button key={v} type="button" className={group === v ? "active" : ""} onClick={() => setGroup(v)}>{label}</button>)}</div></div>
-            <div className="gpsx-list-columns"><span>CONVIDADO</span><span>CATEGORIA</span><span>CHECK-IN / AÇÕES</span></div>
-            <div className="gpsx-list-body">{visible.map(g => <article key={g.id} className={`gpsx-guest-row ${g.arrivedAt ? "arrived" : ""}`}>
-              {avatar(g)}
-              <div className="gpsx-guest-main"><strong>{g.name}</strong><p>{g.clientGroup || g.detail || "Grupo GPS"}</p>{g.group === "cliente" && <small>Gerente: <button type="button" onClick={() => setDialog({ kind: "guest", source: g })}>{byManager[g.managerId]?.name || "Vincular gerente"}</button></small>}</div>
-              <div className="gpsx-category"><span className={g.group === "cliente" ? "client" : ""}>{g.group === "cliente" ? "Cliente" : "Interno"}</span></div>
-              <div className="gpsx-row-actions"><button type="button" className={`gpsx-check-button ${g.arrivedAt ? "done" : ""}`} disabled={busy} onClick={() => checkIn(g)}>{g.arrivedAt ? <><FiRefreshCw /> Desfazer</> : <><FiCheck /> Confirmar</>}</button>
-                {g.arrivedAt && <small>Às {clock(g.arrivedAt)}</small>}
-                {canWa(g) && <button type="button" className="gpsx-wa" onClick={() => whatsapp(g)}><FiMessageCircle /> Enviar WhatsApp</button>}
-                <div className="gpsx-edit-actions"><button type="button" onClick={() => setDialog({ kind: "guest", source: g })} title="Editar convidado" aria-label={`Editar ${g.name}`}><FiEdit2 /></button><button type="button" onClick={() => deleteGuest(g)} title="Excluir convidado" aria-label={`Excluir ${g.name}`}><FiTrash2 /></button></div>
-              </div>
-            </article>)}{!visible.length && <div className="gpsx-empty">Nenhum participante encontrado para esses filtros.</div>}</div>
-            <footer className="gpsx-roster-footer"><span>Mostrando {visible.length} de {guests.length} convidados</span><button type="button" className="gpsx-link" onClick={() => setDialog({ kind: "guest", source: null })}><FiPlus /> Adicionar nome</button></footer>
-          </section>
-
-          <aside className="gpsx-activity"><div className="gpsx-activity-head"><div><small>RECEPÇÃO EM TEMPO REAL</small><h2>Últimas chegadas</h2></div><span><i /> LIVE</span></div>
-            <div className="gpsx-activity-list">{recent.length ? recent.map(g => <div className="gpsx-activity-item" key={g.id}>{avatar(g)}<div><strong>{g.name}</strong><small>{g.group === "cliente" ? "Cliente" : "Interno"} · Presença confirmada</small></div><time>{clock(g.arrivedAt)}</time></div>) : <div className="gpsx-side-empty"><FiClock /><strong>Nenhum check-in ainda</strong><p>As primeiras chegadas aparecerão aqui automaticamente.</p></div>}</div>
-            <div className="gpsx-side-note"><FiMaximize2 /><strong>Recepção sem distrações</strong><p>Ative o modo foco para localizar convidados com mais agilidade.</p><button type="button" onClick={() => { setSpot(true); setSpotQuery(""); setTimeout(() => spotRef.current?.focus(), 100); }}>Abrir modo foco <FiArrowRight /></button></div>
-          </aside>
-        </div>
-        <footer className="gpsx-page-foot"><span>Grupo GPS · Lista de presença</span><span>Sincronização com o servidor a cada 12 segundos</span></footer>
-      </main>
-      <button className="gpsx-floating-add" type="button" onClick={() => setDialog({ kind: "guest", source: null })}><FiPlus /><span>Adicionar nome</span></button>
+  return <div className="gpsr-root"><Sky/><div className="gpsr-shell">
+    <header className="gpsr-top"><div className="gpsr-brand"><i/> GRUPO GPS <span>· RECEPÇÃO</span></div><nav className="gpsr-nav" aria-label="Navegação"><button type="button" className={view==='recepcao'?'active':''} onClick={()=>setView('recepcao')}>Recepção</button><button type="button" className={view==='lista'?'active':''} onClick={()=>setView('lista')}>Lista</button><button type="button" className={view==='gerentes'?'active':''} onClick={()=>setView('gerentes')}>Gerentes</button></nav><div className="gpsr-top-actions"><button type="button" title="Atualizar" aria-label="Atualizar" onClick={()=>reload()}><FiRefreshCw/></button><button type="button" title="Configurações" aria-label="Configurações" onClick={()=>{setEventName(data.eventTitle);setDialog({type:'settings'});}}><FiSettings/></button></div></header>
+    <main className="gpsr-main">
+      <div className="gpsr-heading"><div><span className="gpsr-eyebrow">LISTA DE PRESENÇA</span><h1>{data.eventTitle||'Evento Grupo GPS'}</h1><p>Controle de entrada em tempo real</p></div><div className="gpsr-header-buttons"><button type="button" className="gpsr-btn ghost" onClick={()=>setDialog({type:'import'})}><FiUploadCloud/> Importar Excel</button><button type="button" className="gpsr-btn primary" onClick={()=>setDialog({type:'guest',source:null})}><FiPlus/> Adicionar nome</button></div></div>
+      {error&&<div className="gpsr-alert"><FiInfo/><span><b>Falha na sincronização.</b> {error}</span><button type="button" onClick={()=>reload()}>Tentar novamente</button></div>}
+      {!loaded&&<div className="gpsr-loading">Carregando convidados do servidor...</div>}
+      <section className="gpsr-metrics" aria-label="Indicadores"><div><FiUsers/><span><strong>{guests.length}</strong><small>Convidados</small></span></div><div><FiUserCheck/><span><strong>{present}</strong><small>Presentes</small></span></div><div><FiClock/><span><strong>{pending}</strong><small>Pendentes</small></span></div><div className="gpsr-percent"><strong>{percent}%</strong><span>de presença</span><i><em style={{width:`${percent}%`}}/></i></div></section>
+      {view==='recepcao'&&<><section className="gpsr-quick"><div className="gpsr-card-head"><div><span className="gpsr-eyebrow">CHECK-IN EXPRESSO</span><h2>Localizar participante</h2></div><button className="gpsr-icon-outline" type="button" onClick={()=>{setFocus(true);setFocusQuery('');setTimeout(()=>focusRef.current?.focus(),50);}} title="Modo foco"><FiMaximize2/> <span>Modo foco</span></button></div><div className="gpsr-card-body"><div className="gpsr-search"><FiSearch/><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nome, empresa ou gerente..."/></div><div className="gpsr-filter-inline"><span>FILTRAR</span>{[['todos','Todos'],['cliente','Clientes'],['interno','Internos']].map(([v,l])=><button type="button" key={v} className={group===v?'selected':''} onClick={()=>setGroup(v)}>{l}</button>)}</div><div className="gpsr-result-caption"><strong>RESULTADOS</strong><span>{filtered.length} encontrados</span></div><div className="gpsr-quick-results">{quick.map(g=>row(g,true))}{!quick.length&&<div className="gpsr-empty">Nenhum participante encontrado.</div>}</div></div><div className="gpsr-card-footer"><span>Busque e confirme em um toque.</span><button type="button" onClick={()=>setView('lista')}>Ver lista completa <FiArrowRight/></button></div></section></>}
+      {view==='lista'&&<div className="gpsr-workspace"><section className="gpsr-roster"><div className="gpsr-card-head"><div><span className="gpsr-eyebrow">CONVIDADOS</span><h2>Lista completa <b>{filtered.length}</b></h2></div><button className="gpsr-icon-outline" type="button" onClick={exportCSV}><FiDownload/> <span>Exportar CSV</span></button></div><div className="gpsr-roster-tools"><div className="gpsr-search"><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Pesquisar convidado..."/></div><select aria-label="Ordenar" value={sort} onChange={e=>setSort(e.target.value)}><option value="pendentes">Pendentes primeiro</option><option value="az">Nome A–Z</option><option value="recent">Últimas chegadas</option></select></div><div className="gpsr-filters"><div className="gpsr-status-tabs">{[['todos','Todos'],['pendentes','Aguardando'],['presentes','Presentes']].map(([v,l])=><button type="button" key={v} className={status===v?'selected':''} onClick={()=>setStatus(v)}>{l}</button>)}</div><div className="gpsr-group-tabs">{[['todos','Todos'],['cliente','Clientes'],['interno','Internos']].map(([v,l])=><button type="button" key={v} className={group===v?'selected':''} onClick={()=>setGroup(v)}>{l}</button>)}</div></div><div className="gpsr-table-head"><span>PARTICIPANTE</span><span>TIPO</span><span>CHECK-IN / AÇÕES</span></div><div className="gpsr-list">{filtered.map(g=>row(g))}{!filtered.length&&<div className="gpsr-empty">Não há convidados para este filtro.</div>}</div><div className="gpsr-card-footer"><span>{filtered.length} de {guests.length} convidados</span><button type="button" onClick={()=>setDialog({type:'guest',source:null})}>Adicionar nome <FiPlus/></button></div></section>
+      <aside className="gpsr-activity"><div className="gpsr-card-head"><div><span className="gpsr-eyebrow">AO VIVO</span><h2>Últimas chegadas</h2></div><span className="gpsr-live"><i/> LIVE</span></div><div className="gpsr-activity-body">{recent.length?recent.map(g=><div className="gpsr-arrival" key={g.id}>{avatar(g)}<span><strong>{g.name}</strong><small>{g.group==='cliente'?'Cliente':'Interno'} · Presença confirmada</small></span><time>{hhmm(g.arrivedAt)}</time></div>):<div className="gpsr-empty">Nenhum check-in realizado ainda.</div>}</div></aside></div>}
+      {view==='gerentes'&&<section className="gpsr-roster gpsr-managers-panel"><div className="gpsr-card-head"><div><span className="gpsr-eyebrow">VÍNCULOS COM CLIENTES</span><h2>Gerentes responsáveis</h2></div><button className="gpsr-btn primary" type="button" onClick={()=>setDialog({type:'manager',source:null})}><FiPlus/> Novo gerente</button></div><div className="gpsr-manager-list">{managers.map(m=><article key={m.id} className="gpsr-manager"><span className="gpsr-manager-icon"><FiUsers/></span><div><strong>{m.name}</strong><small>{m.phone||'Sem telefone'} · {m.verified?'Telefone validado':'Pendente de validação'}</small><small>{guests.filter(g=>g.managerId===m.id).length} clientes vinculados</small></div><div className="gpsr-mini-actions"><button title="Editar gerente" type="button" onClick={()=>setDialog({type:'manager',source:m})}><FiEdit2/></button><button title="Excluir gerente" type="button" onClick={()=>removeManager(m)}><FiTrash2/></button></div></article>)}{!managers.length&&<div className="gpsr-empty">Nenhum gerente cadastrado.</div>}</div></section>}
+      <footer className="gpsr-page-footer"><span>Grupo GPS · Lista de presença</span><span>Sincronização a cada 12 segundos · JSON no servidor</span></footer>
+    </main>
     </div>
-
-    {dialog?.kind === "guest" && <Modal eyebrow="GESTÃO DE CONVIDADOS" title={dialog.source ? "Editar participante" : "Adicionar participantes"} close={closeDialog}><GuestForm key={dialog.source?.id || "new"} source={dialog.source} managers={managers} busy={busy} onSubmit={saveGuest} onCancel={closeDialog} /></Modal>}
-    {dialog?.kind === "managers" && <Modal eyebrow="VÍNCULOS COM CLIENTES" title="Gerentes responsáveis" close={closeDialog} size="wide"><div className="gpsx-manager-list">{managers.map(m => <article key={m.id} className="gpsx-manager"><div className="gpsx-manager-avatar"><FiUsers /></div><div className="gpsx-manager-info"><strong>{m.name}</strong><span>{m.phone || "Telefone não cadastrado"}</span><small>{m.verified ? "✓ Número conferido" : "Número pendente de validação"} · {guests.filter(g => g.managerId === m.id).length} cliente(s)</small></div><div className="gpsx-manager-buttons"><button aria-label={`Editar ${m.name}`} title="Editar gerente" type="button" onClick={() => setDialog({ kind: "manager-form", source: m })}><FiEdit2 /></button><button aria-label={`Excluir ${m.name}`} title="Excluir gerente" type="button" onClick={() => deleteManager(m)}><FiTrash2 /></button></div></article>)}{!managers.length && <div className="gpsx-empty">Nenhum gerente cadastrado.</div>}</div><div className="gpsx-dialog-actions"><button type="button" className="gpsx-button primary" onClick={() => setDialog({ kind: "manager-form", source: null })}><FiPlus /> Novo gerente</button></div></Modal>}
-    {dialog?.kind === "manager-form" && <Modal eyebrow="CONTATO DO GERENTE" title={dialog.source ? "Editar gerente" : "Cadastrar gerente"} close={() => setDialog({ kind: "managers" })}><ManagerForm source={dialog.source} onSubmit={saveManager} onCancel={() => setDialog({ kind: "managers" })} busy={busy} /></Modal>}
-    {dialog?.kind === "confirm" && <Modal eyebrow="CONFIRMAÇÃO NECESSÁRIA" title={dialog.title} close={dialog.onCancel || closeDialog}><p className="gpsx-confirm-message">{dialog.text}</p><div className="gpsx-dialog-actions"><button type="button" className="gpsx-button outline" onClick={dialog.onCancel || closeDialog}>Cancelar</button><button type="button" disabled={busy} className={`gpsx-button ${dialog.danger ? "danger" : "primary"}`} onClick={dialog.onConfirm}>{busy ? "Salvando..." : dialog.confirmLabel}</button></div></Modal>}
-    {dialog?.kind === "settings" && <Modal eyebrow="PREFERÊNCIAS" title="Configurações do evento" close={closeDialog}><form className="gpsx-form" onSubmit={updateEvent}><label>Nome do evento<input maxLength={90} value={eventName} onChange={e => setEventName(e.target.value)} required /></label><div className="gpsx-dialog-actions"><button disabled={busy} className="gpsx-button primary" type="submit"><FiCheck /> Salvar título</button></div></form><hr className="gpsx-divider" /><div className="gpsx-dialog-actions"><button type="button" className="gpsx-button outline" onClick={downloadCsv}><FiDownload /> Exportar CSV</button><button type="button" className="gpsx-button outline" onClick={() => setDialog({ kind: "managers" })}><FiSettings /> Gerenciar telefones</button></div></Modal>}
-
-    {success && <div className="gpsx-success-overlay" role="dialog" aria-modal="true" aria-label="Chegada confirmada"><div className="gpsx-success-card"><button type="button" className="gpsx-success-x" onClick={() => setSuccess(null)} aria-label="Fechar"><FiX /></button><div className="gpsx-success-check"><FiCheck /></div><small>CHECK-IN REALIZADO</small><h2>{success.name}</h2><p>{success.clientGroup || success.detail || "Seja bem-vindo(a)!"}</p><time><FiClock /> Chegada às {clock(success.arrivedAt)}</time><div className="gpsx-success-actions">{success.group === "cliente" && canWa(success) && <button type="button" className="gpsx-button primary" onClick={() => whatsapp(success)}><FiMessageCircle /> Enviar pelo WhatsApp</button>}<button type="button" className="gpsx-button outline" onClick={() => { setSuccess(null); setQuickQuery(""); searchRef.current?.focus(); }}>Próximo convidado <FiArrowRight /></button></div><p className="gpsx-success-note">Presença salva no servidor. O WhatsApp é enviado manualmente pelo recepcionista.</p></div></div>}
-
-    {spot && <div className="gpsx-spotlight" role="dialog" aria-modal="true" aria-label="Modo foco"><div className="gpsx-spot-top"><span>GRUPO GPS · RECEPÇÃO</span><button type="button" onClick={() => setSpot(false)}>Fechar <FiX /></button></div><div className="gpsx-spot-body"><small>CHECK-IN EXPRESSO</small><h2>Localize um convidado.</h2><div className="gpsx-spot-search"><FiSearch /><input ref={spotRef} autoFocus type="search" value={spotQuery} onChange={e => setSpotQuery(e.target.value)} placeholder="Nome, empresa ou gerente..." /></div><p>{spotResults.length} resultados nesta pesquisa</p><div className="gpsx-spot-results">{spotResults.map(g => <article key={g.id}>{avatar(g)}<div className="gpsx-person"><strong>{g.name}</strong><small>{g.clientGroup || g.detail || "Grupo GPS"}</small></div><button disabled={busy || !!g.arrivedAt} onClick={() => checkIn(g)} type="button">{g.arrivedAt ? "✓ Presente" : "Confirmar"}</button></article>)}{!spotResults.length && <div className="gpsx-empty">Nenhum nome encontrado.</div>}</div></div><footer>Pressione Esc para voltar à lista de presença.</footer></div>}
-
-    {toast && <div className="gpsx-toast" role="status"><FiCheckCircle /><span>{toast}</span><button type="button" aria-label="Fechar mensagem" onClick={() => setToast("")}><FiX /></button></div>}
+    {dialog?.type==='guest'&&<Overlay title={dialog.source?'Editar participante':'Adicionar convidados'} eyebrow="CADASTRO" close={close}><GuestEditor key={dialog.source?.id||'new'} source={dialog.source} managers={managers} busy={busy} save={saveGuest} close={close}/></Overlay>}
+    {dialog?.type==='manager'&&<Overlay title={dialog.source?'Editar gerente':'Novo gerente'} eyebrow="GERENTES" close={close}><ManagerEditor key={dialog.source?.id||'new'} source={dialog.source} save={saveManager} busy={busy} close={close}/></Overlay>}
+    {dialog?.type==='import'&&<Overlay title="Importar convidados" eyebrow="PLANILHA EXCEL / CSV" large close={close}><ImportSheet busy={busy} onImport={importGuests} close={close}/></Overlay>}
+    {dialog?.type==='settings'&&<Overlay title="Configurações do evento" eyebrow="PREFERÊNCIAS" close={close}><form className="gpsr-form" onSubmit={async e=>{e.preventDefault();if(await mutate('editarEvento',{eventTitle:eventName})){close();notify('Evento atualizado.');}}}><label>Nome do evento<input required maxLength={90} value={eventName} onChange={e=>setEventName(e.target.value)}/></label><div className="gpsr-modal-actions"><button type="submit" className="gpsr-btn primary" disabled={busy}>Salvar nome</button><button type="button" className="gpsr-btn ghost" onClick={exportCSV}>Exportar CSV</button></div></form></Overlay>}
+    {dialog?.type==='confirm'&&<Overlay title={dialog.title} eyebrow="CONFIRMAÇÃO" close={close}><p className="gpsr-confirm-copy">{dialog.message}</p><div className="gpsr-modal-actions"><button className="gpsr-btn ghost" type="button" onClick={close}>Cancelar</button><button className={`gpsr-btn ${dialog.danger?'danger':'primary'}`} type="button" disabled={busy} onClick={dialog.confirm}>{busy?'Salvando...':dialog.button}</button></div></Overlay>}
+    {success&&<div className="gpsr-success-mask" role="dialog" aria-modal="true" aria-label="Check-in confirmado"><div className="gpsr-success"><button type="button" className="gpsr-square" aria-label="Fechar" onClick={()=>setSuccess(null)}><FiX/></button><span className="gpsr-success-symbol"><FiCheck/></span><span className="gpsr-eyebrow">CHECK-IN CONFIRMADO</span><h2>{success.name}</h2><p>Chegada registrada às {hhmm(success.arrivedAt)}</p><div className="gpsr-success-buttons">{canWa(success)&&<button type="button" className="gpsr-btn primary" onClick={()=>whatsapp(success)}><FiMessageCircle/> Enviar WhatsApp</button>}<button type="button" className="gpsr-btn ghost" onClick={()=>{setSuccess(null);setQuery('');searchRef.current?.focus();}}>Próximo convidado <FiArrowRight/></button></div></div></div>}
+    {focus&&<div className="gpsr-focus" role="dialog" aria-modal="true" aria-label="Check-in em tela cheia"><header className="gpsr-focus-head"><span>GRUPO GPS · RECEPÇÃO</span><button className="gpsr-btn ghost" type="button" onClick={()=>setFocus(false)}>Fechar <FiX/></button></header><div className="gpsr-focus-inner"><span className="gpsr-eyebrow">CHECK-IN EXPRESSO</span><h2>Localize um convidado.</h2><div className="gpsr-search gpsr-focus-search"><FiSearch/><input ref={focusRef} autoFocus value={focusQuery} onChange={e=>setFocusQuery(e.target.value)} placeholder="Nome, empresa ou gerente..."/></div><p>{focused.length} resultados exibidos</p><div className="gpsr-focus-results">{focused.map(g=><article key={g.id}>{avatar(g)}<div className="gpsr-person-details"><strong>{g.name}</strong><small>{g.clientGroup||g.detail||'Grupo GPS'}</small></div><button type="button" className={`gpsr-check ${g.arrivedAt?'done':''}`} onClick={()=>checkin(g)} disabled={busy}>{g.arrivedAt?'Desfazer':'Confirmar'}</button></article>)}{!focused.length&&<div className="gpsr-empty">Nenhum convidado encontrado.</div>}</div></div></div>}
+    {toast&&<div className="gpsr-toast" role="status"><FiCheckCircle/><span>{toast}</span><button aria-label="Fechar aviso" type="button" onClick={()=>setToast('')}><FiX/></button></div>}
   </div>;
 }
