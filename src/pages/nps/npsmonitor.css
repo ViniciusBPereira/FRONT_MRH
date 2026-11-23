@@ -387,3 +387,79 @@
   .gpsr-root.gpsr-layout-v4 *::before,
   .gpsr-root.gpsr-layout-v4 *::after {animation:none !important;transition:none !important;scroll-behavior:auto !important;}
 }
+
+/* ============================================================================
+   MODO FOCO • TELA CHEIA NATIVA (equivalente ao F11 onde houver suporte)
+   Adicional da versão V5. Mantém o CSS V4 sem mudar os componentes anteriores.
+   ============================================================================ */
+.gpsr-root.gpsr-layout-v4:fullscreen,
+.gpsr-root.gpsr-layout-v4:-webkit-full-screen {
+  inset:0 !important;
+  width:100vw !important;
+  height:100vh !important;
+  height:100dvh !important;
+  max-height:100dvh !important;
+  overflow:hidden !important;
+  border-radius:0 !important;
+  background:#070b14;
+}
+.gpsr-root.gpsr-layout-v4 .gpsr-focus {
+  min-height:100vh;
+  min-height:100dvh;
+  height:100dvh;
+  padding-top:max(14px,env(safe-area-inset-top));
+  padding-bottom:max(14px,env(safe-area-inset-bottom));
+  padding-left:max(14px,env(safe-area-inset-left));
+  padding-right:max(14px,env(safe-area-inset-right));
+}
+.gpsr-root.gpsr-layout-v4 .gpsr-focus-head > .gpsr-focus-actions {
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  flex:0 0 auto !important;
+  gap:8px !important;
+  min-width:0 !important;
+}
+.gpsr-root.gpsr-layout-v4 .gpsr-focus-actions > button.gpsr-btn {
+  display:inline-flex !important;
+  flex:0 0 auto !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:7px;
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  height:39px !important;
+  padding:9px 12px !important;
+  white-space:nowrap;
+  border:1px solid #35536b;
+  border-radius:10px;
+}
+.gpsr-root.gpsr-layout-v4 .gpsr-focus-actions > button.gpsr-fullscreen-toggle {
+  border-color:#1e756b;
+  color:#75f5d6;
+  background:#123633;
+}
+.gpsr-root.gpsr-layout-v4 .gpsr-fullscreen-tip {
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  margin:0 0 17px !important;
+  padding:11px 13px !important;
+  border:1px solid #315a60;
+  border-radius:11px;
+  background:#123039;
+  color:#b5deda;
+  font-size:11px;
+  line-height:1.55;
+  text-align:left !important;
+}
+.gpsr-root.gpsr-layout-v4 .gpsr-fullscreen-tip > svg {flex:none;width:17px;height:17px;margin-top:1px;}
+@media (max-width:440px) {
+  .gpsr-root.gpsr-layout-v4 .gpsr-focus-head {gap:8px;font-size:9px;letter-spacing:.6px;}
+  .gpsr-root.gpsr-layout-v4 .gpsr-focus-head > span {min-width:0;line-height:1.3;max-width:125px;}
+  .gpsr-root.gpsr-layout-v4 .gpsr-focus-head > .gpsr-focus-actions {gap:6px !important;}
+  .gpsr-root.gpsr-layout-v4 .gpsr-focus-actions > button.gpsr-btn {padding:8px 9px !important;height:36px !important;font-size:10px;}
+  .gpsr-root.gpsr-layout-v4 .gpsr-focus-fullscreen-label {display:none;}
+  .gpsr-root.gpsr-layout-v4 .gpsr-focus-actions > button.gpsr-fullscreen-toggle {width:38px !important;}
+}
