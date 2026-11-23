@@ -40,7 +40,7 @@ export default function AppRoutes() {
         <Route path="/" element={<Login />} />
 
         {/* ================= NPS MONITOR (SEM LOGIN) ================= */}
-        <Route path="/SemanaDaQualidade" element={<NPSMonitor />} />
+        <Route path="/evento" element={<NPSMonitor />} />
 
         {/* ================= EMAE - SABARÁ (SEM LOGIN) ================= */}
         <Route path="/emae/sabara" element={<EmaeMonitor />} />
