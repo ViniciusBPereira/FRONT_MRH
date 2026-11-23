@@ -147,24 +147,100 @@ function ImportSheet({ busy, onImport, close }) {
   const [preview,setPreview]=useState(null); const [fileName,setFileName]=useState('');
   const [error,setError]=useState(''); const [reading,setReading]=useState(false);
   const [selection,setSelection]=useState('todas');
+  // Importação somente com bibliotecas já presentes no package-lock.json.
+  // ExcelJS: .xlsx. CSV: parser local, sem dependências externas.
+  const parseCSV = (source, delimiter) => {
+    const text = source.replace(/^\uFEFF/, '');
+    const rows = [];
+    let line = [], part = '', quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '"') {
+        if (quoted && text[i + 1] === '"') { part += '"'; i++; }
+        else quoted = !quoted;
+      } else if (ch === delimiter && !quoted) {
+        line.push(part); part = '';
+      } else if ((ch === '\r' || ch === '\n') && !quoted) {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        line.push(part); part = '';
+        if (line.some(v => v.trim())) rows.push(line);
+        line = [];
+      } else {
+        part += ch;
+      }
+    }
+    line.push(part);
+    if (line.some(v => v.trim())) rows.push(line);
+    if (!rows.length) return [];
+    const headers = rows[0].map(s => String(s || '').trim());
+    return rows.slice(1).map(values =>
+      Object.fromEntries(headers.map((header, index) => [header, String(values[index] ?? '').trim()]))
+    );
+  };
+  const csvDelimiter = (text) => {
+    // Conta separadores fora de aspas apenas na primeira linha lógica.
+    let quoted = false, semi = 0, comma = 0;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '"') {
+        if (quoted && text[i+1] === '"') i++;
+        else quoted = !quoted;
+      } else if (!quoted && (ch === '\n' || ch === '\r')) break;
+      else if (!quoted && ch === ';') semi++;
+      else if (!quoted && ch === ',') comma++;
+    }
+    return semi >= comma ? ';' : ',';
+  };
+  const cellText = (cell) => {
+    const v = cell?.value;
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') {
+      if (Array.isArray(v.richText)) return v.richText.map(x => x.text || '').join('').trim();
+      if ('result' in v) return String(v.result ?? '').trim();
+      if ('text' in v) return String(v.text ?? '').trim();
+      if ('hyperlink' in v) return String(v.hyperlink ?? '').trim();
+    }
+    if (v instanceof Date) return v.toLocaleDateString('pt-BR');
+    return String(v).trim();
+  };
   const read=async(file)=>{
     if(!file) return;
     setError('');setPreview(null);setReading(true);setFileName(file.name);
     try {
-      if(file.size>7*1024*1024)throw new Error('O arquivo deve ter no máximo 7 MB.');
-      const module=await import('xlsx');
-      const XLSX=module.default || module;
-      const buffer=await file.arrayBuffer();
-      const workbook=XLSX.read(buffer,{type:'array',cellDates:false});
-      const sheets=workbook.SheetNames.map(name=>({name,rows:XLSX.utils.sheet_to_json(workbook.Sheets[name],{defval:'',raw:false,blankrows:false})}));
-      if(!sheets.length)throw new Error('Nenhuma aba encontrada.');
+      if(file.size>7*1024*1024) throw new Error('O arquivo deve ter no máximo 7 MB.');
+      const ext=file.name.toLowerCase().split('.').pop();
+      let sheets=[];
+      if(ext==='csv') {
+        const text=await file.text();
+        sheets=[{name:file.name.replace(/\.csv$/i,''),rows:parseCSV(text,csvDelimiter(text))}];
+      } else if(ext==='xlsx') {
+        const module=await import('exceljs');
+        const ExcelJS=module.default || module;
+        const workbook=new ExcelJS.Workbook();
+        await workbook.xlsx.load(await file.arrayBuffer());
+        sheets=workbook.worksheets.map(sheet=>{
+          const header=sheet.getRow(1);
+          const count=Math.max(sheet.columnCount,header.cellCount);
+          const cols=Array.from({length:count},(_,i)=>cellText(header.getCell(i+1)));
+          const rows=[];
+          sheet.eachRow((row,number)=>{
+            if(number===1) return;
+            const entry=Object.fromEntries(cols.flatMap((name,index)=>name?[[name,cellText(row.getCell(index+1))]]:[]));
+            if(Object.values(entry).some(Boolean))rows.push(entry);
+          });
+          return {name:sheet.name,rows};
+        });
+      } else if(ext==='xls') {
+        throw new Error('O formato .xls antigo não é compatível com ExcelJS. Abra no Excel e salve como .xlsx ou .csv.');
+      } else throw new Error('Formato inválido. Use .xlsx ou .csv.');
+      if(!sheets.length) throw new Error('Nenhuma aba encontrada.');
       setPreview(sheets);setSelection('todas');
     }catch(e){setError(`Não foi possível ler a planilha: ${e.message}`);}finally{setReading(false);}
   };
   const selected=preview?.filter(s=>selection==='todas'||s.name===selection)||[];
   const parsed=useMemo(()=>rowsToGuests(selected),[preview,selection]);
   return <div className="gpsr-import">
-    <div className="gpsr-import-drop"><FiUploadCloud/><strong>Selecione a planilha de convidados</strong><p>Excel .xlsx, .xls ou CSV. A importação não apaga os registros existentes.</p><label className="gpsr-btn primary" htmlFor="gpsr-file">Escolher arquivo</label><input id="gpsr-file" type="file" accept=".xlsx,.xls,.csv" onChange={e=>{read(e.target.files?.[0]);e.target.value='';}}/></div>
+    <div className="gpsr-import-drop"><FiUploadCloud/><strong>Selecione a planilha de convidados</strong><p>Excel .xlsx ou CSV. A importação não apaga os registros existentes.</p><label className="gpsr-btn primary" htmlFor="gpsr-file">Escolher arquivo</label><input id="gpsr-file" type="file" accept=".xlsx,.csv" onChange={e=>{read(e.target.files?.[0]);e.target.value='';}}/></div>
     {reading && <p className="gpsr-hint">Lendo planilha...</p>}
     {error && <p className="gpsr-import-error">{error}</p>}
     {preview && <>
