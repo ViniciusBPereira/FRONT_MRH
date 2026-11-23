@@ -421,14 +421,17 @@ export default function NPSMonitor() {
   function removeManager(m){setDialog({type:'confirm',title:'Excluir gerente?',message:`Remover ${m.name}? Não será permitido se existirem convidados vinculados.`,button:'Excluir gerente',danger:true,confirm:async()=>{if(await mutate('excluirGerente',{id:m.id})){setDialog({type:'managers'});notify('Gerente removido.');}}});}
   async function importGuests(rows){const result=await mutate('importarConvidadosPlanilha',{guests:rows});if(result){close();notify(`${result.added} convidados importados · ${result.skipped} ignorados · ${result.managersAdded} gerentes novos.`);setView('lista');}}
   /* ============================================================
-     WHATSAPP MULTIUSUÁRIO
+     WHATSAPP — APP NO CELULAR / WEB NO COMPUTADOR
 
-     O link abre no dispositivo de QUEM CLICOU (recepcionista).
-     O gerente continua sendo o DESTINATÁRIO, pelo telefone cadastrado.
+     Em celular, usamos um deep link do WhatsApp para solicitar
+     diretamente o aplicativo instalado, sem passar por wa.me ou
+     web.whatsapp.com. Não há fallback automático para WhatsApp Web.
 
-     wa.me é um link universal: em outro computador, a conta utilizada
-     será a que estiver conectada ao WhatsApp daquele dispositivo/navegador.
-     Não existe envio automático nem escolha de remetente pelo servidor.
+     A navegação deve acontecer SINCRONAMENTE dentro do onClick,
+     sem await, para preservar a ativação do toque.
+
+     Em computador, abrimos o WhatsApp Web da sessão local.
+     A mensagem fica pronta; o envio é sempre manual.
      ============================================================ */
   function whatsapp(g) {
     const gerente = byManager[g.managerId];
@@ -451,17 +454,35 @@ export default function NPSMonitor() {
       `chegou ao evento ${data.eventTitle || 'Grupo GPS'} às ${hhmm(g.arrivedAt)}.\n\n` +
       `Recepção Grupo GPS.`;
 
-    // Não força web.whatsapp.com nem vincula uma conta específica.
-    // WhatsApp resolve a abertura no Web/app do computador ou celular atual.
-    const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
+    const texto = encodeURIComponent(mensagem);
+    const isMobile = Boolean(navigator.userAgentData?.mobile) ||
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    // A abertura precisa ocorrer diretamente no clique para evitar bloqueio de popup.
-    window.open(url, '_blank', 'noopener,noreferrer');
+    try {
+      if (isMobile) {
+        // Aplicativo instalado no próprio celular (WhatsApp padrão).
+        // Não usamos window.open: isso pode abrir uma aba/webview.
+        // O navegador / sistema operacional decide qual app atende o link.
+        window.location.href = `whatsapp://send?phone=${telefone}&text=${texto}`;
+      } else {
+        // WhatsApp Web usa a conta conectada neste computador,
+        // sem vincular o remetente ao usuário que cadastrou o evento.
+        window.open(
+          `https://web.whatsapp.com/send?phone=${telefone}&text=${texto}`,
+          '_blank',
+          'noopener,noreferrer',
+        );
+      }
+    } catch (erro) {
+      notify('Não foi possível abrir o WhatsApp. Confira se o aplicativo está instalado e permita a abertura de links externos.');
+      return;
+    }
 
-    // Este registro indica ABERTURA da conversa, não envio da mensagem.
+    // Registra a tentativa de abrir a conversa, nunca o envio.
+    // Não espera a API antes de abrir o app, evitando bloqueio do toque.
     api('registrarWhatsappAberto', { id: g.id }).catch(() => {});
     setSuccess(null);
-    notify('WhatsApp aberto neste dispositivo. Confira a conta e clique em Enviar.');
   }
   function exportCSV(){
     const cols=[['Nome','Categoria','Empresa / Área','Gerente','Presença','Chegada']];
